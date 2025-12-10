@@ -59,26 +59,26 @@ app.use("/api", routes);
 // Crear el servidor HTTP para Express
 const httpServer = http.createServer(app);
 
-// Configurar Socket.IO y habilitar CORS
-const io = socketIo(httpServer, {
-  cors: {
-    origin: allowedOrigins, // Usar el array de URLs permitidas
-    methods: ["GET", "POST"],
-    credentials: true, // Permitir credenciales
-  },
-});
-app.set("io", io); // <- ESTO es lo que falta
+// // Configurar Socket.IO y habilitar CORS
+// const io = socketIo(httpServer, {
+//   cors: {
+//     origin: allowedOrigins, // Usar el array de URLs permitidas
+//     methods: ["GET", "POST"],
+//     credentials: true, // Permitir credenciales
+//   },
+// });
+// app.set("io", io); // <- ESTO es lo que falta
 
-io.on("connection", (socket) => {
-  // El frontend debe enviar el ID del usuario al conectarse
-  socket.on("register", (employeeId) => {
-    socket.join(employeeId); // Así puedes enviarle mensajes individualmente
-    console.log(`Socket ${socket.id} unido a ${employeeId}`);
-  });
+// io.on("connection", (socket) => {
+//   // El frontend debe enviar el ID del usuario al conectarse
+//   socket.on("register", (employeeId) => {
+//     socket.join(employeeId); // Así puedes enviarle mensajes individualmente
+//     console.log(`Socket ${socket.id} unido a ${employeeId}`);
+//   });
 
-  socket.on("disconnect", () => {
-    console.log(`Socket ${socket.id} desconectado`);
-  });
-});
+//   socket.on("disconnect", () => {
+//     console.log(`Socket ${socket.id} desconectado`);
+//   });
+// });
 
 module.exports = { app, httpServer }; // Exporta tanto la app como el servidor
