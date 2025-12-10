@@ -21,14 +21,14 @@ const updateAsistenciaColaborador = async (req, res) => {
   try {
     let findAsistenciaColaborador;
     let ingresoConDni = false;
-    let findColaborador
+    let findColaboradors
 
     if (dni) {
       const findColaborador = await Employee.findOne({ documentNumber: dni });
       if (!findColaborador) {
         return res.status(404).json({ message: "Colaborador no encontrado" });
       }
-      findColaborador = findColaborador;
+      findColaboradors = findColaborador;
       findAsistenciaColaborador = await AsistenciaColaborador.findOne({
         colaborador: findColaborador._id,
         fecha: fecha,
@@ -135,10 +135,10 @@ const updateAsistenciaColaborador = async (req, res) => {
     if (salida) {
       messageFinal = "Salida registrada correctamente";
     }
-    if (findColaborador && ingresoConDni) {
-      messageFinal = `Asistencia registrada para ${findColaborador.name} ${findColaborador.lastname}`;
+    if (findColaboradors && ingresoConDni) {
+      messageFinal = `Asistencia registrada para ${findColaboradors.name} ${findColaboradors.lastname}`;
     }
-    const messsage = findColaborador ? messageFinal : "Asistencia actualizada correctamente";
+    let messsage = findColaboradors ? messageFinal : "Asistencia actualizada correctamente";
     return res
       .status(200)
       .json({ message: messsage });
