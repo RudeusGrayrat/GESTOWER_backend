@@ -136,7 +136,7 @@ const updateAsistenciaColaborador = async (req, res) => {
       messageFinal = "Salida registrada correctamente";
     }
     if (findColaborador && ingresoConDni) {
-      messageFinal = `Asistencia registrada para ${findColaborador.firstName} ${findColaborador.lastName}`;
+      messageFinal = `Asistencia registrada para ${findColaborador.name} ${findColaborador.lastname}`;
     }
     const messsage = findColaborador ? messageFinal : "Asistencia actualizada correctamente";
     return res
