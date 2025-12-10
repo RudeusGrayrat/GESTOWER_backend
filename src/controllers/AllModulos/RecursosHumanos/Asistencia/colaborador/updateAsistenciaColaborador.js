@@ -128,10 +128,20 @@ const updateAsistenciaColaborador = async (req, res) => {
     if (observaciones) findAsistenciaColaborador.observaciones = observaciones;
 
     await findAsistenciaColaborador.save();
-
+    let messageFinal
+    if (ingreso) {
+      messageFinal = "Ingreso registrado correctamente";
+    }
+    if (salida) {
+      messageFinal = "Salida registrada correctamente";
+    }
+    if (findColaborador && ingresoConDni) {
+      messageFinal = `Asistencia registrada para ${findColaborador.firstName} ${findColaborador.lastName}`;
+    }
+    const messsage = findColaborador ? messageFinal : "Asistencia actualizada correctamente";
     return res
       .status(200)
-      .json({ message: "Asistencia de " + (findColaborador.lastname + " " + findColaborador.name) + " actualizada" });
+      .json({ message: messsage });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
