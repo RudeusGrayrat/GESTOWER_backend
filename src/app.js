@@ -13,8 +13,8 @@ dotenv.config();
 const { FRONTEND_URL, FRONTEND2_URL } = process.env;
 
 const allowedOrigins = [
-  // FRONTEND_URL?.toString(),
-  // FRONTEND2_URL?.toString(),
+  FRONTEND_URL?.toString(),
+  FRONTEND2_URL?.toString(),
   "http://localhost:5173", // Agrega cualquier otro dominio si es necesario
 ];
 
