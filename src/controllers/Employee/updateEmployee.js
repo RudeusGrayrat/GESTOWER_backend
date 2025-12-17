@@ -32,6 +32,8 @@ const updateEmployeePartial = async (req, res) => {
     sede,
     photo,
     funcion,
+    regimenPension,
+    codigoSpp,
     asistenciaAutomatica,
   } = req.body;
   const io = req.app.get("io");
@@ -45,7 +47,7 @@ const updateEmployeePartial = async (req, res) => {
     if (!userFound) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-console.log("dateStart", dateStart);
+    console.log("dateStart", dateStart);
 
     if (name) userFound.name = name;
     if (lastname) userFound.lastname = lastname;
@@ -69,6 +71,8 @@ console.log("dateStart", dateStart);
     if (phoneNumber) userFound.phoneNumber = phoneNumber;
     if (business) userFound.business = business;
     if (sede) userFound.sede = sede;
+    if (regimenPension) userFound.regimenPension = regimenPension;
+    if (codigoSpp) userFound.codigoSpp = codigoSpp;
     if (asistenciaAutomatica)
       userFound.asistenciaAutomatica = asistenciaAutomatica;
     if (photo) {
