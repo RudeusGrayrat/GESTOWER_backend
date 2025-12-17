@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Skipping tests...\"",
-    "start": "index.js"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",

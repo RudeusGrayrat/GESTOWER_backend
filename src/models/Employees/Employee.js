@@ -70,9 +70,12 @@ const employeeSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    // regimenPension: {
-    //   type: String,
-    // },
+    regimenPension: {
+      type: String,
+    },
+    codigoSpp: {
+      type: String,
+    },
     password: {
       type: String,
       required: true,

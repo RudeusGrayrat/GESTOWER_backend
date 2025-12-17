@@ -31,12 +31,12 @@ const contractSchema = new mongoose.Schema(
       ref: "Employee",
       required: true,
     },
-    regimenPension: {
-      type: String,
-    },
-    codigoSpp: {
-      type: Number,
-    },
+    // regimenPension: {
+    //   type: String,
+    // },
+    // codigoSpp: {
+    //   type: Number,
+    // },
   },
   { timestamps: true }
 );
