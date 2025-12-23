@@ -15,7 +15,6 @@ const updateAsistenciaColaborador = async (req, res) => {
     almuerzoSede,
     finAlmuerzo,
     finAlmuerzoSede,
-    observaciones,
     dni,
   } = req.body;
   try {
@@ -114,7 +113,6 @@ const updateAsistenciaColaborador = async (req, res) => {
       if (finAlmuerzoSede)
         findAsistenciaColaborador.finAlmuerzoSede = finAlmuerzoSede;
     }
-    if (observaciones) findAsistenciaColaborador.observaciones = observaciones;
 
     await findAsistenciaColaborador.save();
 
