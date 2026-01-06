@@ -34,8 +34,6 @@ const getEmployeeByParams = async (req, res) => {
 
     return res.json({ data, total });
   } catch (err) {
-    console.log("Error al buscar Colaboradores:", err);
-
     return res
       .status(500)
       .json({ message: err.message || "Error al buscar Colaboradores" });

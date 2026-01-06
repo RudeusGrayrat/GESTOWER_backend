@@ -15,6 +15,14 @@ const createMovimiento = async (req, res) => {
         message: "Falta el código de ingreso para el movimiento de salida",
       });
     }
+    if (body.movimiento === "INGRESO" && body.numeroDeActa) {
+      const findMovimiento = await Movimiento.findOne({ numeroDeActa: body.numeroDeActa });
+      if (findMovimiento) {
+        return res.status(400).json({
+          message: "Ya existe un movimiento con ese número de acta",
+        });
+      }
+    }
     const correlativa = await generarCorrelativa(
       body.movimiento,
       body.contrato,

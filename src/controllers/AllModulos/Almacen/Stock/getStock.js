@@ -21,8 +21,6 @@ const getStockAlmacen = async (req, res) => {
     let sedeIds = [];
     let userIds = [];
 
-    console.log("search:", search, " regex:", regex);
-
     if (regex !== null) {
       // Buscar productos por nombre o código
       const productos = await ProductoAlmacen.find({
@@ -79,12 +77,8 @@ const getStockAlmacen = async (req, res) => {
       StockAlmacen.countDocuments(query),
     ]);
 
-    console.log("data:", data, " total:", total);
-
     return res.status(200).json({ data, total });
   } catch (err) {
-    console.log("Error al buscar stockAlmacen:", err);
-
     return res
       .status(500)
       .json({ message: err.message || "Error al buscar stockAlmacen" });
