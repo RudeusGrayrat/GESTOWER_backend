@@ -1,25 +1,36 @@
-const ContratoAlmacen = require("../../../../models/AllModulos/Almacen/Contrato");
+const ProductoAlmacen = require("../../../../models/AllModulos/Almacen/Producto");
 
-const putContratoAlmacen = async (req, res) => {
+const patchProductoAlmacen = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { nombre, descripcion, fechaInicio, fechaFin, estado } = req.body;
-    if (!id) {
+    console.log("ENTRAMOS A PATCH PRODUCTO ALMACEN");
+    const { _id, unidadDeMedida, descripcion, subItem, observaciones, estado } = req.body;
+    console.log(req.body);
+    if (!_id) {
       return res.status(400).json({
-        message: "ID del contrato es requerido",
+        message: "ID del producto es requerido",
       });
     }
-    const findContrato = await ContratoAlmacen.findById(id);
-    if (nombre) findContrato.nombre = nombre;
-    if (descripcion) findContrato.descripcion = descripcion;
-    if (fechaInicio) findContrato.fechaInicio = fechaInicio;
-    if (fechaFin) findContrato.fechaFin = fechaFin;
-    if (estado) findContrato.estado = estado;
+    const findProducto = await ProductoAlmacen.findById(_id);
+
+    if (descripcion) findProducto.descripcion = descripcion;
+    if (unidadDeMedida) findProducto.unidadDeMedida = unidadDeMedida;
+    if (subItem) findProducto.subItem = subItem;
+    if (observaciones) findProducto.observaciones = observaciones;
+    if (estado) findProducto.estado = estado;
+
+    const response = await findProducto.save();
+
+    return res.status(200).json({
+      message: "Producto actualizado correctamente",
+      data: response,
+      type: "Correcto",
+    });
   } catch (error) {
+    console.log("ERROR EN PATCH PRODUCTO ALMACEN:", error);
     return res.status(500).json({
       message: error.message,
     });
   }
 };
 
-module.exports = putContratoAlmacen;
+module.exports = patchProductoAlmacen;

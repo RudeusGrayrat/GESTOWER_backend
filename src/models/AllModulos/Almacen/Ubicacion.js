@@ -16,6 +16,7 @@ const ubicacionSchema = new Schema(
           required: true,
         },
         cantidad: Number,
+        _id: false,
       },
     ],
     rack: String,

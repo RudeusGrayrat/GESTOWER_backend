@@ -10,6 +10,7 @@ const productoAlmacenSchema = new Schema(
       enum: ["1.1", "1.2", "1.3"],
     },
     observaciones: String,
+    estado: String
   },
   { timestamps: true }
 );

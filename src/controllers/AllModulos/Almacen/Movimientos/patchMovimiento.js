@@ -28,7 +28,7 @@ const patchMovimiento = async (req, res) => {
     }
     const movimientoActualizado = await Movimiento.findById(_id);
     if (!movimientoActualizado) {
-      return res.status(404).json({ error: "Movimiento no encontrado" });
+      return res.status(404).json({ message: "Movimiento no encontrado" });
     }
     if (movimiento) movimientoActualizado.movimiento = movimiento;
     if (codigoIngreso) movimientoActualizado.codigoIngreso = codigoIngreso;
@@ -38,8 +38,13 @@ const patchMovimiento = async (req, res) => {
     if (contribuyente) movimientoActualizado.contribuyente = contribuyente;
     if (numeroDocumento)
       movimientoActualizado.numeroDocumento = numeroDocumento;
-    if (datosGenerales)
-      movimientoActualizado.datosGenerales = datosGenerales;
+    if (datosGenerales) {
+      movimientoActualizado.datosGenerales = {
+        ...movimientoActualizado.datosGenerales,
+        ...datosGenerales,
+      }
+    }
+
     if (descripcionBienes)
       movimientoActualizado.descripcionBienes = descripcionBienes;
     if (detallesDePeso)
@@ -60,8 +65,7 @@ const patchMovimiento = async (req, res) => {
       movimiento: response,
     });
   } catch (error) {
-    console.error("Error al actualizar el movimiento:", error);
-    return res.status(500).json({ error: "Error al actualizar el movimiento" });
+    return res.status(500).json({ message: error.message });
   }
 };
 

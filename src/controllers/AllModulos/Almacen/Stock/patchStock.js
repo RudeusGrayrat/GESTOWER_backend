@@ -24,8 +24,8 @@ const patchStockAlmacen = async (req, res) => {
     );
     if (productoId) findStock.productoId = productoId;
     if (ubicacionId) findStock.ubicacionId = ubicacionId;
-    if (cantidadTotal !== undefined) findStock.cantidadTotal = cantidadTotal;
-    if (cantidadDisponible !== undefined)
+    if (cantidadTotal) findStock.cantidadTotal = cantidadTotal;
+    if (cantidadDisponible)
       findStock.cantidadDisponible = cantidadDisponible;
     if (movimientoId) findStock.movimientoId = movimientoId;
     if (sedeId) findStock.sedeId = sedeId;

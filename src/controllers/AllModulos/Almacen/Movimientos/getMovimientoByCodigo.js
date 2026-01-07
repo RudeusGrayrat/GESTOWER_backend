@@ -13,10 +13,6 @@ const getMovimientoByCodigo = async (req, res) => {
       correlativa: String(codigoIngreso),
     })
       .populate("contratoId")
-      .populate(
-        "descripcionBienes.productoId",
-        "item cantidad descripcion unidadDeMedida pesoNeto pesoBruto estadoEnvase subItem"
-      )
       .populate("creadoPor", "name lastname email")
       .lean();
 

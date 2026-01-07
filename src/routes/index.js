@@ -102,6 +102,7 @@ const getContratoAlmacenPagination = require("../controllers/AllModulos/Almacen/
 const deleteStockAlmacen = require("../controllers/AllModulos/Almacen/Stock/deleteStockAlmacen");
 const getContratosPaginacion = require("../controllers/Contracts/getContratosPaginacion");
 const recursosHumanosRouter = require("./Sistemas/RecursosHumanos");
+const patchProductoAlmacen = require("../controllers/AllModulos/Almacen/Producto/putProductos");
 
 const router = Router();
 
@@ -134,6 +135,7 @@ router.post("/postUbicacionProducto", postUbicacion);
 router.post("/postProductoAlmacen", postProductosAlmacen);
 router.post("/postStockAlmacen", postStockAlmacen);
 
+router.patch("/patchProductoAlmacen", patchProductoAlmacen);
 router.patch("/patchMovimientoAlmacen", patchMovimiento);
 router.patch("/patchStockAlmacen", patchStockAlmacen);
 router.patch("/patchUbicacionProducto", patchUbicacion);
