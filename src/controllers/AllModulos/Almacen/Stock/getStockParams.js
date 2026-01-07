@@ -3,7 +3,6 @@ const StockAlmacen = require("../../../../models/AllModulos/Almacen/Stock");
 const getStockByParams = async (req, res) => {
   try {
     const { contratoId, productoId } = req.query;
-    console.log("Params recibidos:", req.query);
     const query = {};
     if (contratoId) query.contratoId = contratoId;
     //ahora ya no estrá la ubicación en stock
@@ -12,7 +11,6 @@ const getStockByParams = async (req, res) => {
     const Stock = await StockAlmacen.find(query)
       .populate("productoId")
       .populate("movimientoId");
-    console.log("Stock:", Stock);
     return res.status(200).json({
       message: "Stock obtenidos correctamente",
       data: Stock,
