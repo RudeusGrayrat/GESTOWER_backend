@@ -1,9 +1,6 @@
 const Employee = require("../../../../models/Employees/Employee");
 const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
-
-function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+const escapeRegExp = require("../../../../utils/REGEX.JS");
 
 const getBoletaDePagoByParams = async (req, res) => {
   const {

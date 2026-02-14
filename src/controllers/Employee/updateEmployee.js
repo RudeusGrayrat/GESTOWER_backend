@@ -47,7 +47,6 @@ const updateEmployeePartial = async (req, res) => {
     if (!userFound) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    console.log("dateStart", dateStart);
 
     if (name) userFound.name = name;
     if (lastname) userFound.lastname = lastname;
@@ -81,23 +80,23 @@ const updateEmployeePartial = async (req, res) => {
     if (funcion) userFound.funcion = funcion;
 
     if (password) {
-      await deleteImage(userFound.photo);
+      // await deleteImage(userFound.photo);
       userFound.password = await hashPassword(password);
     }
 
     await userFound.save();
-    const response = await sendNotification(io, {
-      type: "SUBMODULE",
-      title: "Empleado actualizado",
-      message: "Se modificó un registro",
-      creatorId: _id,
-      submodule: {
-        name: "INVENTARIO",
-        module: "SISTEMAS",
-      },
-    });
+    // const response = await sendNotification(io, {
+    //   type: "SUBMODULE",
+    //   title: "Empleado actualizado",
+    //   message: "Se modificó un registro",
+    //   creatorId: _id,
+    //   submodule: {
+    //     name: "INVENTARIO",
+    //     module: "SISTEMAS",
+    //   },
+    // });
 
-    console.log("Notification created:", response);
+    // console.log("Notification created:", response);
 
     return res.status(200).json({
       message: "Usuario actualizado correctamente",

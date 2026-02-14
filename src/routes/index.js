@@ -51,7 +51,6 @@ const getContractById = require("../controllers/Contracts/getContractById");
 const getCertificados = require("../controllers/AllModulos/Certificaciones/Certificados/getCertificados");
 const postCertificado = require("../controllers/AllModulos/Certificaciones/Certificados/postCertificados");
 const deleteContract = require("../controllers/Contracts/deleteContracts");
-const sistemasRouter = require("./Sistemas/sistemas");
 const postWidget = require("../controllers/Herramientas/Widgets/postWidgets");
 const deleteWidget = require("../controllers/Herramientas/Widgets/deleteWidget");
 const getAllWidgets = require("../controllers/Herramientas/Widgets/getAllWidgets");
@@ -100,9 +99,11 @@ const getSedePagination = require("../controllers/AllModulos/Almacen/Ubicacion/g
 const deleteContratoAlmacen = require("../controllers/AllModulos/Almacen/Contrato/deleteContrato");
 const getContratoAlmacenPagination = require("../controllers/AllModulos/Almacen/Contrato/getContratoPagiancion");
 const deleteStockAlmacen = require("../controllers/AllModulos/Almacen/Stock/deleteStockAlmacen");
-const getContratosPaginacion = require("../controllers/Contracts/getContratosPaginacion");
-const recursosHumanosRouter = require("./Sistemas/RecursosHumanos");
 const patchProductoAlmacen = require("../controllers/AllModulos/Almacen/Producto/putProductos");
+const sistemasRouter = require("./Modulos/sistemas");
+const recursosHumanosRouter = require("./Modulos/RecursosHumanos");
+const herramientasRouter = require("./Modulos/Herramientas");
+const certificacionesRouter = require("./Modulos/Certificacion");
 
 const router = Router();
 
@@ -213,5 +214,7 @@ router.get("/ruc", consulApi);
 
 router.use("/sistemas", sistemasRouter);
 router.use("/rrhh", recursosHumanosRouter);
+router.use("/herramientas", herramientasRouter);
+router.use("/certificaciones", certificacionesRouter);
 
 module.exports = router;
