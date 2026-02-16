@@ -1,6 +1,6 @@
 const Destino = require("../../../../models/AllModulos/Certificacion/Destino");
 const Ubigeo = require("../../../../models/AllModulos/Certificacion/Ubigeo");
-const escapeRegExp = require("../../../../utils/regex");
+const escapeRegExp = require("../../../../utils/regex.js");
 
 const getDestinoPagination = async (req, res) => {
     try {

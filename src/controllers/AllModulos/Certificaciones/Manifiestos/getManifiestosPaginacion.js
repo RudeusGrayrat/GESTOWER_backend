@@ -3,7 +3,7 @@ const Generador = require("../../../../models/AllModulos/Certificacion/Generador
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
 const Planta = require("../../../../models/AllModulos/Certificacion/Plantas");
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
-const escapeRegExp = require("../../../../utils/regex");
+const escapeRegExp = require("../../../../utils/regex.js");
 
 
 const getManifiestoPagination = async (req, res) => {

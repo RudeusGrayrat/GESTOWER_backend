@@ -1,5 +1,5 @@
 const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
-const escapeRegExp = require("../../../../utils/regex");
+const escapeRegExp = require("../../../../utils/regex.js");
 
 
 const getGeneradorPagination = async (req, res) => {
