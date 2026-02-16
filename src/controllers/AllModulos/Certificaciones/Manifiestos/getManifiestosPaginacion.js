@@ -43,8 +43,8 @@ const getManifiestoPagination = async (req, res) => {
             query.$or = [
                 { numeroManifiesto: regex },
                 { "residuo.descripcion": regex },
-                { "transporte.conductor.nombre": regex },
-                { "transporte.vehiculo.placa": regex },
+                { "transporte.nombreConductor": regex },
+                { "transporte.placaVehiculo": regex },
                 { generadorId: { $in: generadoresIds } },
                 { plantaId: { $in: plantasIds } },
                 { transportistaId: { $in: transportistasIds } },

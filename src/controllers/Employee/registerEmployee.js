@@ -84,24 +84,24 @@ const registerEmployee = async (req, res) => {
 
     await newEmployee.save();
 
-    const widget = await Widget.findOne({
-      key: "NOVEDADES_LINK",
-    });
-    if (!widget) {
-      return res.status(404).json({ message: "Widget no encontrado" });
-    }
+    // const widget = await Widget.findOne({
+    //   key: "NOVEDADES_LINK",
+    // });
+    // if (!widget) {
+    //   return res.status(404).json({ message: "Widget no encontrado" });
+    // }
 
-    const prefs = new WidgetPreference({
-      colaborador: newEmployee._id,
-      widgets: [
-        {
-          widget: widget._id,
-          orden: 0,
-        },
-      ],
-    });
+    // const prefs = new WidgetPreference({
+    //   colaborador: newEmployee._id,
+    //   widgets: [
+    //     {
+    //       widget: widget._id,
+    //       orden: 0,
+    //     },
+    //   ],
+    // });
 
-    await prefs.save();
+    // await prefs.save();
     res.status(201).json({
       message: "Colaborador registrado exitosamente",
     });

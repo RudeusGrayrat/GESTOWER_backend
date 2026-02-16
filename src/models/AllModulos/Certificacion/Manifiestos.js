@@ -115,7 +115,7 @@ const manifiestoSchema = mongoose.Schema(
         },
 
         // SECCIÓN 3.2: EO-RS DEL DESTINO FINAL
-        destinoOperacion: {
+        destinoFinal: {
             tipoManejo: {
                 type: String,
                 enum: ['TRATAMIENTO', 'VALORIZACION', 'DISPOSICION_FINAL'],
@@ -131,7 +131,7 @@ const manifiestoSchema = mongoose.Schema(
             dniDestino: { type: String },
             cargoDestino: { type: String },
             fechaHoraRecepcion: { type: Date },
-            cantidadEntregada: { type: Number }, // en toneladas (coincide con destinoOperacion.cantidadEntregada)
+            cantidadEntregada: { type: Number }, // en toneladas (coincide con destinoFinal.cantidadEntregada)
             observacionesDestino: { type: String },
         },
 

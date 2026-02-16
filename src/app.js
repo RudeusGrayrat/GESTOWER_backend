@@ -11,12 +11,11 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const { FRONTEND_URL, FRONTEND2_URL } = process.env;
-
 const allowedOrigins = [
-  FRONTEND_URL,
-  FRONTEND2_URL,
   "http://localhost:5173", // Agrega cualquier otro dominio si es necesario
 ];
+if (FRONTEND_URL) allowedOrigins.push(FRONTEND_URL);
+if (FRONTEND2_URL) allowedOrigins.push(FRONTEND2_URL);
 
 const app = express();
 const verifyToken = require("./controllers/auth/midellware");
