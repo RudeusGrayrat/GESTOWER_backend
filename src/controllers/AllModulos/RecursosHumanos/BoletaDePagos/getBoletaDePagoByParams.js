@@ -1,6 +1,6 @@
 const Employee = require("../../../../models/Employees/Employee");
 const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
-const escapeRegExp = require("../../../../utils/REGEX.JS");
+const escapeRegExp = require("../../../../utils/regex");
 
 const getBoletaDePagoByParams = async (req, res) => {
   const {
