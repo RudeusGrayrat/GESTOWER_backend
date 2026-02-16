@@ -63,7 +63,8 @@ const postPlanta = async (req, res) => {
         await newPlanta.save();
         return res.status(201).json({
             message: "Planta creada exitosamente",
-            data: newPlanta
+            data: newPlanta,
+            type: "Correcto"
         });
     } catch (error) {
         return res.status(500).json({

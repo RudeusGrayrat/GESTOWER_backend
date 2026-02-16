@@ -21,6 +21,7 @@ const postTransportista = async (req, res) => {
         if (!razonSocial || !ruc || !registroEors || !direccion || !ubigeoId || !correoElectronico || !telefono || !representanteLegal?.nombre || !representanteLegal?.dni) {
             return res.status(400).json({
                 message: "Faltan datos requeridos para crear el transportista",
+                type: "Error"
             });
         }
 
@@ -28,6 +29,7 @@ const postTransportista = async (req, res) => {
         if (findTransportista) {
             return res.status(400).json({
                 message: "El transportista con este RUC ya existe",
+                type: "Error"
             });
         }
 
@@ -56,11 +58,13 @@ const postTransportista = async (req, res) => {
         await newTransportista.save();
         return res.status(201).json({
             message: "Transportista creado exitosamente",
-            data: newTransportista
+            data: newTransportista,
+            type: "Correcto"
         });
     } catch (error) {
         return res.status(500).json({
             message: error.message || "Error al crear el transportista",
+            type: "Error"
         });
     }
 };
