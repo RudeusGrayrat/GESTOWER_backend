@@ -17,29 +17,29 @@ const tokenVerify = async (req, res, next) => {
   }
   let decoded;
   try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-      try {
-        decoded = jwt.verify(token, MASTER_TOKEN);
-        if (decoded.role !== "superadmin") {
-          return res.status(403).json({ message: "Token inválido" });
-        }
-      } catch (err) {
-        return res.status(403).json({ message: "Token no válido o expirado" });
-      }
-    }
-
-    if (decoded.role === "superadmin") {
-      req.user = { role: "superadmin" };
-      return next();
-    }
+    decoded = jwt.verify(token, JWT_SECRET);
+  } catch (error) {
     try {
-      const userFound = await Employee.findOne({ email: decoded.email });
-      if (!userFound) {
-        return res.status(401).json({ message: "No se encuentra este usuario" });
+      decoded = jwt.verify(token, MASTER_TOKEN);
+      if (decoded.role !== "superadmin") {
+        return res.status(403).json({ message: "Token inválido" });
       }
-      req.user = userFound.toObject();
-      delete req.user.password;
+    } catch (err) {
+      return res.status(403).json({ message: "Token no válido o expirado" });
+    }
+  }
+
+  if (decoded.role === "superadmin") {
+    req.user = { role: "superadmin" };
+    return next();
+  }
+  try {
+    const userFound = await Employee.findOne({ email: decoded.email });
+    if (!userFound) {
+      return res.status(401).json({ message: "No se encuentra este usuario" });
+    }
+    req.user = userFound.toObject();
+    delete req.user.password;
     next();
   } catch (err) {
     return res
