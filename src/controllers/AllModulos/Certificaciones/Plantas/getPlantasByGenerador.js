@@ -3,7 +3,7 @@ const Planta = require("../../../../models/AllModulos/Certificacion/Plantas");
 const getPlantasByGeneradorId = async (req, res) => {
     try {
         const { generadorId } = req.params;
-
+        console.log("ID del generador recibido:", generadorId);
         if (!generadorId) {
             return res.status(400).json({
                 message: "Se requiere el ID del generador",
@@ -16,11 +16,11 @@ const getPlantasByGeneradorId = async (req, res) => {
             estado: "ACTIVO"
         })
             .populate('ubigeoId', 'codigo departamento provincia distrito')
-            .sort({ denominacion: 1 });
-
+            .sort({ createdAt: -1 });
+        console.log(`Plantas encontradas para el generador ${generadorId}:`, plantas);
         return res.status(200).json({
             message: "Plantas obtenidas exitosamente",
-            plantas,
+            data: plantas,
             type: "Correcto"
         });
 

@@ -38,6 +38,13 @@ const transportistaSchema = mongoose.Schema(
             type: String,
             required: true,
         },
+        contingencias: {
+            derrame: { type: String },
+            infiltracion: { type: String },
+            incendio: { type: String },
+            explosion: { type: String },
+            otrosAccidentes: { type: String },
+        },
         representanteLegal: {
             nombre: { type: String, required: true },
             dni: { type: String, required: true },

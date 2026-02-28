@@ -27,7 +27,6 @@ const getTransportistaPagination = async (req, res) => {
 
             query.$or = [
                 { razonSocial: regex },
-                { ruc: !isNaN(search) ? parseInt(search) : regex },
                 { registroEors: regex },
                 { autorizacionMunicipal: regex },
                 { documentoRuta: regex },
@@ -40,11 +39,13 @@ const getTransportistaPagination = async (req, res) => {
                 { "responsableTecnico.numeroColegiatura": regex },
                 { ubigeoId: { $in: ubigeosIds } }
             ];
+            if (!isNaN(search) && search.trim() !== '') {
+                query.$or.push({ ruc: parseInt(search) });
+            }
         }
 
         const [data, total] = await Promise.all([
             Transportista.find(query)
-                .populate("ubigeoId")
                 .skip(page * limit)
                 .limit(parseInt(limit))
                 .populate("ubigeoId")
@@ -55,6 +56,7 @@ const getTransportistaPagination = async (req, res) => {
 
         return res.json({ data, total });
     } catch (error) {
+        console.error("Error fetching transportistas with pagination:", error);
         return res.status(500).json({ message: error.message || "Error al buscar transportistas" });
     }
 };

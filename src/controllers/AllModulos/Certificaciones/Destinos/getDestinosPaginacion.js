@@ -31,7 +31,6 @@ const getDestinoPagination = async (req, res) => {
 
             query.$or = [
                 { razonSocial: regex },
-                { ruc: !isNaN(search) ? parseInt(search) : regex },
                 { codigoRegistroEors: regex },
                 { correoElectronico: regex },
                 { telefono: regex },
@@ -40,6 +39,9 @@ const getDestinoPagination = async (req, res) => {
                 { "responsableTecnico.nombre": regex },
                 { ubigeoId: { $in: ubigeosIds } }
             ];
+            if (!isNaN(search) && search.trim() !== '') {
+                query.$or.push({ ruc: parseInt(search) });
+            }
         }
 
         const [data, total] = await Promise.all([

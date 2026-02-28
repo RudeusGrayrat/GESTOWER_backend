@@ -64,8 +64,8 @@ const getManifiestoPagination = async (req, res) => {
         const [data, total] = await Promise.all([
             Manifiesto.find(query)
                 .populate("generadorId")
-                .populate("plantaId")
-                .populate("transportistaId")
+                .populate({ path: "plantaId", populate: { path: "ubigeoId" } })
+                .populate({ path: "transportistaId", populate: { path: "ubigeoId" } })
                 .populate("destinoId")
                 .populate("creadoPor", "name lastname")
                 .populate("modificadoPor", "name lastname")

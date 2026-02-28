@@ -17,13 +17,15 @@ const getGeneradorPagination = async (req, res) => {
 
             query.$or = [
                 { razonSocial: regex },
-                { ruc: !isNaN(search) ? parseInt(search) : regex },
                 { correoElectronico: regex },
                 { direccion: regex },
                 { telefono: regex },
                 { representanteLegal: regex },
                 { dniRepresentante: regex },
             ];
+            if (!isNaN(search) && search.trim() !== "") {
+                query.$or.push({ ruc: search.trim() });
+            }
         }
 
         const [data, total] = await Promise.all([

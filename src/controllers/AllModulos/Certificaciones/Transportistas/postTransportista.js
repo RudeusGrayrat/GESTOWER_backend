@@ -15,6 +15,7 @@ const postTransportista = async (req, res) => {
             telefono,
             representanteLegal,
             responsableTecnico,
+            contingencias,
             estado
         } = req.body;
 
@@ -52,6 +53,7 @@ const postTransportista = async (req, res) => {
             telefono,
             representanteLegal,
             responsableTecnico: responsableTecnico || {},
+            contingencias: contingencias || {},
             estado: estado || "ACTIVO",
         });
 
