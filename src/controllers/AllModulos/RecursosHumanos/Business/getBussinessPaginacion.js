@@ -1,5 +1,5 @@
 const Business = require("../../../../models/Business");
-const escapeRegExp = require("../../../../utils/regex");
+const escapeRegExp = require("../../../../utils/regex/regex");
 
 const getBusinessPaginacion = async (req, res) => {
     try {

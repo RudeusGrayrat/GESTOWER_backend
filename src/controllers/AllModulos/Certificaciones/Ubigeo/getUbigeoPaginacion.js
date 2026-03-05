@@ -1,5 +1,5 @@
 const Ubigeo = require("../../../../models/AllModulos/Certificacion/Ubigeo");
-const escapeRegExp = require("../../../../utils/regex.js");
+const escapeRegExp = require("../../../../utils/regex/regex.js");
 
 const getUbigeoPagination = async (req, res) => {
     try {

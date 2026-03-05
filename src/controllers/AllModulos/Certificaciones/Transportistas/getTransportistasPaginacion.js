@@ -1,6 +1,6 @@
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 const Ubigeo = require("../../../../models/AllModulos/Certificacion/Ubigeo");
-const escapeRegExp = require("../../../../utils/regex.js");
+const escapeRegExp = require("../../../../utils/regex/regex.js");
 
 
 const getTransportistaPagination = async (req, res) => {

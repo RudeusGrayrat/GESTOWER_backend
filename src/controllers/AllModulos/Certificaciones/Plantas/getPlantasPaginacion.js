@@ -1,7 +1,7 @@
 const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
 const Planta = require("../../../../models/AllModulos/Certificacion/Plantas");
 const Ubigeo = require("../../../../models/AllModulos/Certificacion/Ubigeo");
-const escapeRegExp = require("../../../../utils/regex.js");
+const escapeRegExp = require("../../../../utils/regex/regex.js");
 
 const getPlantaPagination = async (req, res) => {
     try {
