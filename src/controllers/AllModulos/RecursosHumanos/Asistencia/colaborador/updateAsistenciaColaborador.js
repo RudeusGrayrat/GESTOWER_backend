@@ -15,12 +15,17 @@ const updateAsistenciaColaborador = async (req, res) => {
     almuerzoSede,
     finAlmuerzo,
     finAlmuerzoSede,
+    estado,
+    observaciones,
     dni,
   } = req.body;
   try {
     let findAsistenciaColaborador;
     let ingresoConDni = false;
-
+    let colaboradorEncontrado = {
+      name: "",
+      lastname: "",
+    }
     if (dni) {
       const findColaborador = await Employee.findOne({ documentNumber: dni });
       if (!findColaborador) {
@@ -30,13 +35,17 @@ const updateAsistenciaColaborador = async (req, res) => {
         colaborador: findColaborador._id,
         fecha: fecha,
       });
+      colaboradorEncontrado.name = findColaborador.name;
+      colaboradorEncontrado.lastname = findColaborador.lastname;
 
       ingresoConDni = true; // Marcar que se ingresó con DNI
     } else if (colaborador) {
       findAsistenciaColaborador = await AsistenciaColaborador.findOne({
         colaborador: colaborador,
         fecha: fecha,
-      });
+      })?.populate("colaborador", "name lastname");
+      colaboradorEncontrado.name = findAsistenciaColaborador.colaborador.name;
+      colaboradorEncontrado.lastname = findAsistenciaColaborador.colaborador.lastname;
     }
 
     if (!findAsistenciaColaborador) {
@@ -48,15 +57,15 @@ const updateAsistenciaColaborador = async (req, res) => {
     if (ingresoConDni) {
       if (inicioAlmuerzo && findAsistenciaColaborador.inicioAlmuerzo)
         return res.status(400).json({
-          message: "No se puede modificar el Inicio de Almuerzo",
+          message: `No se puede modificar el Inicio de Almuerzo de ${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname}`,
         });
       if (finAlmuerzo && findAsistenciaColaborador.finAlmuerzo)
         return res.status(400).json({
-          message: "No se puede modificar el Fin de Almuerzo",
+          message: `No se puede modificar el Fin de Almuerzo de ${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname}`,
         });
       if (salida && findAsistenciaColaborador.salida)
         return res.status(400).json({
-          message: "No se puede modificar la Salida",
+          message: `No se puede modificar la Salida de ${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname}`,
         });
     }
 
@@ -113,12 +122,14 @@ const updateAsistenciaColaborador = async (req, res) => {
       if (finAlmuerzoSede)
         findAsistenciaColaborador.finAlmuerzoSede = finAlmuerzoSede;
     }
+    if (observaciones) findAsistenciaColaborador.observaciones = observaciones;
+    if (estado) findAsistenciaColaborador.estado = estado;
 
     await findAsistenciaColaborador.save();
 
     return res
       .status(200)
-      .json({ message: "Asistencia del colaborador actualizada" });
+      .json({ message: `Asistencia del ${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname} actualizada` });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

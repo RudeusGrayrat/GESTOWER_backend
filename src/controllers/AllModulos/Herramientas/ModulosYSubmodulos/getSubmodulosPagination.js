@@ -24,8 +24,8 @@ const getSubmodulosPagination = async (req, res) => {
             Submodule.find(query)
                 .skip(page * limit)
                 .limit(parseInt(limit))
-                .lean()
-                .sort({ createdAt: -1 }),
+                .sort({ _id: -1 })
+                .lean(),
             Submodule.countDocuments(query),
         ]);
         return res.json({ data, total });

@@ -10,6 +10,8 @@ const submoduleSchema = mongoose.Schema({
     ref: "Module",
     required: true,
   },
+}, {
+  timestamps: true,
 });
 
 const Submodule = mongoose.model("Submodule", submoduleSchema);
