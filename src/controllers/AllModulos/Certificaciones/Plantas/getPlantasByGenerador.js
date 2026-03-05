@@ -4,7 +4,7 @@ const getPlantasByGeneradorId = async (req, res) => {
     try {
         const { generadorId } = req.params;
         console.log("ID del generador recibido:", generadorId);
-        if (!generadorId) {
+        if (!generadorId || generadorId === "undefined") {
             return res.status(400).json({
                 message: "Se requiere el ID del generador",
                 type: "Error"
