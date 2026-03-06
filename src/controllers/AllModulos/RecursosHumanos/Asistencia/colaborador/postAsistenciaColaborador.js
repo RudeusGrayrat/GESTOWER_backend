@@ -33,20 +33,12 @@ const postAsistenciaColaborador = async (req, res) => {
 
     let asistenciaExistente;
     let findColaborador = null;
-    let colaboradorEncontrado = {
-      name: "",
-      lastname: "",
-    }
 
     if (colaborador) {
       asistenciaExistente = await AsistenciaColaborador.findOne({
         colaborador,
         fecha,
-      })?.populate("colaborador", "name lastname");
-      if (asistenciaExistente) {
-        colaboradorEncontrado?.name = asistenciaExistente?.colaborador?.name;
-        colaboradorEncontrado?.lastname = asistenciaExistente?.colaborador?.lastname;
-      }
+      });
     } else if (dni) {
       findColaborador = await Employee.findOne({ documentNumber: dni });
 
@@ -59,20 +51,18 @@ const postAsistenciaColaborador = async (req, res) => {
       asistenciaExistente = await AsistenciaColaborador.findOne({
         colaborador: findColaborador._id,
         fecha,
-      })?.populate("colaborador", "name lastname");
-      colaboradorEncontrado?.name = asistenciaExistente?.colaborador?.name;
-      colaboradorEncontrado?.lastname = asistenciaExistente?.colaborador?.lastname;
+      });
     }
 
     if (!asistenciaExistente && !ingreso) {
       return res.status(400).json({
-        message: `${colaboradorEncontrado?.name} ${colaboradorEncontrado?.lastname} marque primero su ingreso`,
+        message: "Debe registrar el ingreso antes de marcar otros datos.",
       });
     }
 
     if (asistenciaExistente) {
       return res.status(400).json({
-        message: `${colaboradorEncontrado?.name} ${colaboradorEncontrado?.lastname} ya tiene una asistencia registrada para esta fecha.`,
+        message: "Ya existe una asistencia para este colaborador en esta fecha",
       });
     }
     let state;
@@ -122,16 +112,11 @@ const postAsistenciaColaborador = async (req, res) => {
     });
 
     await asistencia.save();
-    await asistencia.populate("colaborador", "name lastname");
-
-    colaboradorEncontrado?.name = asistencia?.colaborador?.name;
-    colaboradorEncontrado?.lastname = asistencia?.colaborador?.lastname;
     return res.status(200).json({
-      message: `Asistencia de ${colaboradorEncontrado?.name} ${colaboradorEncontrado?.lastname} registrada exitosamente`,
+      message: "Asistencia creada correctamente",
       asistencia,
     });
   } catch (error) {
-    console.error("Error en postAsistenciaColaborador:", error);
     return res
       .status(500)
       .json({ message: error.message || "Error inesperado en el servidor." });
