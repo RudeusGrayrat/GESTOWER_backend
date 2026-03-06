@@ -36,7 +36,7 @@ const businessSchema = new mongoose.Schema({
       required: true,
     },
   },
-},{
+}, {
   timestamps: true,
 });
 
