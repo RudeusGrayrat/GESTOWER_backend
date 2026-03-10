@@ -34,7 +34,21 @@ const postAsistenciaApp = async (req, res) => {
             });
         }
 
-
+        if (!ingreso) {
+            return res.status(400).json({
+                message: "El ingreso es obligatorio para registrar la asistencia"
+            });
+        }
+        if (ingresoSede === undefined) {
+            return res.status(400).json({
+                message: "La sede de ingreso es obligatoria para registrar la asistencia"
+            });
+        }
+        if (ingreso === null || ingreso.trim() === "") {
+            return res.status(400).json({
+                message: "El ingreso no puede estar vacío"
+            });
+        }
         // Procesar ingreso
         if (ingreso) {
             let minTarde = 0;
