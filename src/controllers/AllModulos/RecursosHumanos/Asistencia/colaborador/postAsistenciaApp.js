@@ -81,6 +81,7 @@ const postAsistenciaApp = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Error al registrar asistencia:", error);
         return res.status(500).json({
             message: error.message || "Error inesperado en el servidor.",
             error: error.message
