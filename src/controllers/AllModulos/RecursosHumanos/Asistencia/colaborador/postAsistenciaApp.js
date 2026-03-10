@@ -27,8 +27,8 @@ const postAsistenciaApp = async (req, res) => {
             colaborador: colaborador._id,
             fecha: fecha,
         });
-
-        if (asistencia) {
+        console.log("Asistencia encontrada:", asistencia);
+        if (asistencia && asistencia.ingreso) {
             return res.status(404).json({
                 message: `${nombreCompleto} ya marcó su ingreso de ${fecha}`,
             });
