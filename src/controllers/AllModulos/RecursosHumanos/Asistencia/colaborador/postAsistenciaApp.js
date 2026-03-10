@@ -23,18 +23,11 @@ const postAsistenciaApp = async (req, res) => {
 
         const nombreCompleto = `${colaborador.name} ${colaborador.lastname}`;
         // Buscar asistencia del colaborador en la fecha específica
-        const asistencia = await AsistenciaColaborador.findOne({
+        let asistencia = await AsistenciaColaborador.findOne({
             colaborador: colaborador._id,
             fecha: fecha,
         });
-        console.log("Asistencia encontrada:", asistencia);
-        if (asistencia && asistencia.ingreso) {
-            return res.status(404).json({
-                message: `${nombreCompleto} ya marcó su ingreso de ${fecha}`,
-            });
-        }
-
-        if (!ingreso) {
+        if (!ingreso || ingreso.trim() === "") {
             return res.status(400).json({
                 message: "El ingreso es obligatorio para registrar la asistencia"
             });
@@ -44,11 +37,19 @@ const postAsistenciaApp = async (req, res) => {
                 message: "La sede de ingreso es obligatoria para registrar la asistencia"
             });
         }
-        if (ingreso === null || ingreso.trim() === "") {
-            return res.status(400).json({
-                message: "El ingreso no puede estar vacío"
+
+        if (!asistencia) {
+            asistencia = new AsistenciaColaborador({
+                colaborador: colaborador._id,
+                fecha: fecha,
+            });
+        } else {
+            // Si ya existe, significa que ya marcó ingreso (segun tu lógica actual)
+            return res.status(400).json({ // Cambié a 400 que es más apropiado
+                message: `${nombreCompleto} ya marcó su ingreso de ${fecha}`,
             });
         }
+
         // Procesar ingreso
         if (ingreso) {
             let minTarde = 0;
