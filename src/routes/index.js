@@ -104,6 +104,7 @@ const sistemasRouter = require("./Modulos/sistemas");
 const recursosHumanosRouter = require("./Modulos/RecursosHumanos");
 const herramientasRouter = require("./Modulos/Herramientas");
 const certificacionesRouter = require("./Modulos/Certificacion");
+const postAsistenciaApp = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/postAsistenciaApp");
 
 const router = Router();
 
@@ -118,7 +119,8 @@ router.post("/createClient", createClient);
 router.post("/createCotizacion", createCotizacion);
 router.post("/createContract", postContracts);
 router.post("/postPlantillasDeContrato", postPlantillasDeContrato);
-router.post("/postAsistenciaColaborador", postAsistenciaColaborador);
+router.post("/postAsistenciaColaborador", postAsistenciaApp);
+router.post("/postAsistenciaErp", postAsistenciaColaborador);
 router.post("/postBoletaDePagos", postBoletaDePagos);
 router.post("/postDatosContables", postDatosContables);
 router.post("/enviarBoletasDePago", enviarBoleta);

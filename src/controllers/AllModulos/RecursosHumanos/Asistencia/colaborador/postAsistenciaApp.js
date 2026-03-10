@@ -10,11 +10,6 @@ const postAsistenciaApp = async (req, res) => {
         fecha,
         ingreso,
         ingresoSede,
-        inicioAlmuerzo,
-        almuerzoSede,
-        salida,
-        salidaSede,
-        observaciones,
     } = req.body;
 
     try {
@@ -34,24 +29,11 @@ const postAsistenciaApp = async (req, res) => {
 
         if (asistencia) {
             return res.status(404).json({
-                message: "No se encontró registro de asistencia para este colaborador en la fecha indicada"
+                message: "Ya existe una asistencia para este colaborador en esta fecha"
             });
         }
 
         const nombreCompleto = `${colaborador.name} ${colaborador.lastname}`;
-
-        // Validaciones específicas para la app (no permitir modificar ciertos campos si ya existen)
-        if (inicioAlmuerzo && asistencia.inicioAlmuerzo) {
-            return res.status(400).json({
-                message: `No se puede modificar el Inicio de Almuerzo de ${nombreCompleto} porque ya fue registrado`
-            });
-        }
-
-        if (salida && asistencia.salida) {
-            return res.status(400).json({
-                message: `No se puede modificar la Salida de ${nombreCompleto} porque ya fue registrada`
-            });
-        }
 
         // Procesar ingreso
         if (ingreso) {
@@ -73,37 +55,6 @@ const postAsistenciaApp = async (req, res) => {
             if (ingresoSede) asistencia.ingresoSede = ingresoSede;
         }
 
-        // Procesar salida
-        if (salida) {
-            let horasExtras = 0;
-            const fechaValida = dayjs(fecha, "DD/MM/YYYY", true);
-            if (!fechaValida.isValid()) {
-                return res.status(400).json({ message: "Fecha inválida" });
-            }
-
-            const diaSemana = fechaValida.day();
-            const horaLimiteSalida = diaSemana === 6
-                ? dayjs("01:30 PM", "hh:mm A")
-                : dayjs("06:00 PM", "hh:mm A");
-
-            const horaSalida = dayjs(salida, "hh:mm A");
-            if (horaSalida.isAfter(horaLimiteSalida)) {
-                horasExtras = horaSalida.diff(horaLimiteSalida, "minute") + 30;
-            }
-
-            asistencia.salida = salida;
-            asistencia.minExtras = horasExtras;
-            if (salidaSede) asistencia.salidaSede = salidaSede;
-        }
-
-        // Actualizar otros campos si se proporcionan
-        if (inicioAlmuerzo) {
-            asistencia.inicioAlmuerzo = inicioAlmuerzo;
-            if (almuerzoSede) asistencia.almuerzoSede = almuerzoSede;
-        }
-
-        if (observaciones) asistencia.observaciones = observaciones;
-
         await asistencia.save();
 
         return res.status(200).json({
@@ -117,7 +68,7 @@ const postAsistenciaApp = async (req, res) => {
 
     } catch (error) {
         return res.status(500).json({
-            message: "Error al actualizar asistencia desde la app",
+            message: error.message || "Error inesperado en el servidor.",
             error: error.message
         });
     }

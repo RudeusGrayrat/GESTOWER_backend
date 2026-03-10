@@ -19,40 +19,21 @@ const postAsistenciaColaborador = async (req, res) => {
       finAlmuerzoSede,
       observaciones,
       estado,
-      dni,
     } = req.body;
 
     if (!fecha) {
       return res.status(400).json({ message: "La Fecha es obligatoria" });
     }
-    if (!colaborador && !dni) {
+    if (!colaborador) {
       return res
         .status(400)
-        .json({ message: "El colaborador o el DNI es obligatorio" });
+        .json({ message: "El colaborador es obligatorio" });
     }
 
-    let asistenciaExistente;
-    let findColaborador = null;
-
-    if (colaborador) {
-      asistenciaExistente = await AsistenciaColaborador.findOne({
-        colaborador,
-        fecha,
-      });
-    } else if (dni) {
-      findColaborador = await Employee.findOne({ documentNumber: dni });
-
-      if (!findColaborador) {
-        return res
-          .status(404)
-          .json({ message: "No se encontró un colaborador con este DNI" });
-      }
-
-      asistenciaExistente = await AsistenciaColaborador.findOne({
-        colaborador: findColaborador._id,
-        fecha,
-      });
-    }
+    const asistenciaExistente = await AsistenciaColaborador.findOne({
+      colaborador,
+      fecha,
+    });
 
     if (!asistenciaExistente && !ingreso) {
       return res.status(400).json({
@@ -95,7 +76,7 @@ const postAsistenciaColaborador = async (req, res) => {
     }
 
     const asistencia = new AsistenciaColaborador({
-      colaborador: colaborador || findColaborador._id,
+      colaborador,
       fecha,
       ingreso,
       ingresoSede,
