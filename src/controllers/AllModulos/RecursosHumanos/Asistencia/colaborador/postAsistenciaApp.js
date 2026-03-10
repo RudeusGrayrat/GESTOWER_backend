@@ -21,6 +21,7 @@ const postAsistenciaApp = async (req, res) => {
             });
         }
 
+        const nombreCompleto = `${colaborador.name} ${colaborador.lastname}`;
         // Buscar asistencia del colaborador en la fecha específica
         const asistencia = await AsistenciaColaborador.findOne({
             colaborador: colaborador._id,
@@ -29,11 +30,10 @@ const postAsistenciaApp = async (req, res) => {
 
         if (asistencia) {
             return res.status(404).json({
-                message: "Ya existe una asistencia para este colaborador en esta fecha"
+                message: `${nombreCompleto} ya tiene registrada una asistencia para esta fecha`
             });
         }
 
-        const nombreCompleto = `${colaborador.name} ${colaborador.lastname}`;
 
         // Procesar ingreso
         if (ingreso) {
@@ -58,7 +58,7 @@ const postAsistenciaApp = async (req, res) => {
         await asistencia.save();
 
         return res.status(200).json({
-            message: `Asistencia de ${nombreCompleto} actualizada correctamente`,
+            message: `Asistencia de ${nombreCompleto} registrada correctamente`,
             colaborador: {
                 nombre: colaborador.name,
                 apellido: colaborador.lastname,

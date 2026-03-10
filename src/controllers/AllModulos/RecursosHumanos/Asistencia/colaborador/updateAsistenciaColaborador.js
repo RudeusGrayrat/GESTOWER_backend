@@ -57,15 +57,15 @@ const updateAsistenciaColaborador = async (req, res) => {
     if (ingresoConDni) {
       if (inicioAlmuerzo && findAsistenciaColaborador.inicioAlmuerzo)
         return res.status(400).json({
-          message: `No se puede modificar el Inicio de Almuerzo de ${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname}`,
+          message: `${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname} ya marcó el Inicio de Almuerzo`,
         });
       if (finAlmuerzo && findAsistenciaColaborador.finAlmuerzo)
         return res.status(400).json({
-          message: `No se puede modificar el Fin de Almuerzo de ${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname}`,
+          message: `${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname} ya marcó el Fin de Almuerzo`,
         });
       if (salida && findAsistenciaColaborador.salida)
         return res.status(400).json({
-          message: `No se puede modificar la Salida de ${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname}`,
+          message: `${colaboradorEncontrado.name} ${colaboradorEncontrado.lastname} ya marcó la Salida`,
         });
     }
 
