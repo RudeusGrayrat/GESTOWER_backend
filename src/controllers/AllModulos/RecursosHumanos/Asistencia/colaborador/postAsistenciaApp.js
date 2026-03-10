@@ -30,7 +30,7 @@ const postAsistenciaApp = async (req, res) => {
 
         if (asistencia) {
             return res.status(404).json({
-                message: `${nombreCompleto} ya tiene registrada una asistencia para esta fecha`
+                message: `${nombreCompleto} ya marcó su ingreso de ${fecha}`,
             });
         }
 
