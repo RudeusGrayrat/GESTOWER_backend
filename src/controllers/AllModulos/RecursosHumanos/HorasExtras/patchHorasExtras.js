@@ -16,7 +16,7 @@ const patchHorasExtras = async (req, res) => {
         const horasExtras = await HorasExtras.findById(_id);
 
         if (!horasExtras) {
-            return res.status(404).json({ message: "Registro no encontrado" });
+            return res.status(404).json({ message: "Registro no encontrado", type: "Error" });
         }
 
         if (fecha) horasExtras.fecha = fecha;
@@ -30,12 +30,13 @@ const patchHorasExtras = async (req, res) => {
 
         return res.status(200).json({
             message: "Horas extras actualizadas correctamente",
-            horasExtras
+            horasExtras,
+            type: "Correcto"
         });
 
     } catch (error) {
 
-        return res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message, type: "Error" });
 
     }
 };

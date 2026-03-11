@@ -41,11 +41,12 @@ const patchPermiso = async (req, res) => {
 
         return res.status(200).json({
             message: "Permiso actualizado correctamente",
-            permiso
+            permiso,
+            type: "Correcto"
         });
 
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message, type: "Error" });
     }
 };
 
