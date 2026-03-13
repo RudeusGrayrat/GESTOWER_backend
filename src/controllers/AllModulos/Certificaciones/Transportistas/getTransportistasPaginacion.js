@@ -49,6 +49,7 @@ const getTransportistaPagination = async (req, res) => {
                 .skip(page * limit)
                 .limit(parseInt(limit))
                 .populate("ubigeoId")
+                .populate("generadores")
                 .lean()
                 .sort({ createdAt: -1 }),
             Transportista.countDocuments(query),

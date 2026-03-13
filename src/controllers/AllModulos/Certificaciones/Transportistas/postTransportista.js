@@ -16,10 +16,11 @@ const postTransportista = async (req, res) => {
             representanteLegal,
             responsableTecnico,
             contingencias,
+            generadores,
             estado
         } = req.body;
 
-        if (!razonSocial || !ruc || !registroEors || !direccion || !ubigeoId || !correoElectronico || !telefono || !representanteLegal?.nombre || !representanteLegal?.dni) {
+        if (!razonSocial || !ruc || !registroEors || !direccion || !ubigeoId || !correoElectronico || !telefono || !representanteLegal?.nombre || !representanteLegal?.dni || !responsableTecnico?.nombre || !responsableTecnico?.numeroColegiatura) {
             return res.status(400).json({
                 message: "Faltan datos requeridos para crear el transportista",
                 type: "Error"
@@ -54,6 +55,7 @@ const postTransportista = async (req, res) => {
             representanteLegal,
             responsableTecnico: responsableTecnico || {},
             contingencias: contingencias || {},
+            generadores: generadores || [],
             estado: estado || "ACTIVO",
         });
 

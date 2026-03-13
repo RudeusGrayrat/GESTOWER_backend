@@ -14,6 +14,7 @@ const postDestino = require("../../controllers/AllModulos/Certificaciones/Destin
 const postUbigeosBatch = require("../../controllers/AllModulos/Certificaciones/Ubigeo/postUbigeoBatch");
 const getPlantasByGeneradorId = require("../../controllers/AllModulos/Certificaciones/Plantas/getPlantasByGenerador");
 const returnPdf = require("../../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/returnPdf");
+const getGeneradoresByTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/getGeneradoresByTransportista");
 
 const certificacionesRouter = Router();
 
@@ -21,6 +22,7 @@ certificacionesRouter.get("/getGeneradoresPaginacion", getGeneradoresPaginacion)
 certificacionesRouter.get("/getManifiestosPaginacion", getManifiestosPaginacion);
 certificacionesRouter.get("/getPlantasPaginacion", getPlantasPaginacion);
 certificacionesRouter.get("/getPlantasByGenerador/:generadorId", getPlantasByGeneradorId);
+certificacionesRouter.get("/getGeneradoresByTransportista/:transportistaId", getGeneradoresByTransportista);
 certificacionesRouter.get("/getTransportistasPaginacion", getTransportistaPagination);
 certificacionesRouter.get("/getDestinosPaginacion", getDestinoPagination);
 certificacionesRouter.get("/getUbigeoPaginacion", getUbigeoPagination);

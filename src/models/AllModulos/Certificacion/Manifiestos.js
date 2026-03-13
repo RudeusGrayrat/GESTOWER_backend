@@ -146,25 +146,6 @@ const manifiestoSchema = mongoose.Schema(
             }
         },
 
-        // PASO 7: REFRENDOS (Firmas)
-        // referendoEntrega: {
-        //     firmaGenerador: { type: String },
-        //     nombreGenerador: { type: String, required: true },
-        //     firmaTransportista: { type: String },
-        //     nombreTransportista: { type: String, required: true },
-        //     dniTransportista: { type: String, required: true },
-        //     cargoTransportista: { type: String, required: true },
-        //     fechaHora: { type: Date, required: true },
-        // },
-        // referendoRecepcion: {
-        //     firmaDestino: { type: String },
-        //     nombreDestino: { type: String, required: true },
-        //     dniDestino: { type: String, required: true },
-        //     cargoDestino: { type: String, required: true },
-        //     fechaHora: { type: Date, required: true },
-        // },
-
-        // Auditoría
         creadoPor: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Employee',
