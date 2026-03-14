@@ -59,7 +59,12 @@ const transportistaSchema = mongoose.Schema(
                 ref: 'Generador',
             }
         ],
-
+        conductores: [
+            {
+                nombre: { type: String },
+                licencia: { type: String },
+            }
+        ],
         estado: {
             type: String,
             enum: ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'],

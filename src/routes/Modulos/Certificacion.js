@@ -15,6 +15,7 @@ const postUbigeosBatch = require("../../controllers/AllModulos/Certificaciones/U
 const getPlantasByGeneradorId = require("../../controllers/AllModulos/Certificaciones/Plantas/getPlantasByGenerador");
 const returnPdf = require("../../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/returnPdf");
 const getGeneradoresByTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/getGeneradoresByTransportista");
+const patchTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/patchTransportista");
 
 const certificacionesRouter = Router();
 
@@ -35,5 +36,7 @@ certificacionesRouter.post("/postUbigeo", postUbigeo);
 certificacionesRouter.post("/postUbigeosBatch", postUbigeosBatch);
 certificacionesRouter.post("/postDestino", postDestino);
 certificacionesRouter.post("/returnPdf", returnPdf);
+
+certificacionesRouter.patch("/editTransportista/:transportistaId", patchTransportista)
 
 module.exports = certificacionesRouter;
