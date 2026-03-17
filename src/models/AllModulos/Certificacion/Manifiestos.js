@@ -1,163 +1,122 @@
-const { default: mongoose } = require("mongoose");
+const { default: mongoose } = require("mongoose")
 
-const manifiestoSchema = mongoose.Schema(
+const manifiestoSchema = new mongoose.Schema(
     {
-        // Identificación única (autogenerado en frontend)
-        numeroManifiesto: {
-            type: String,
-            required: true,
-            unique: true,
-        },
-        año: {
-            type: Number,
-            required: true,
-        },
-        mes: {
-            type: Number,
-            required: true,
-        },
+        numeroManifiesto: { type: String, required: true, unique: true },
+        año: { type: Number, required: true },
+        mes: { type: Number, required: true },
+        estado: { type: String, enum: ["PENDIENTE", "EN_REVISION", "OBSERVADO", "APROBADO", "RECHAZADO", "COMPLETADO", "ANULADO"], default: 'PENDIENTE' },
 
-        // Estado del manifiesto - AGREGAR MÁS ESTADOS para el flujo de trabajo
-        estado: {
-            type: String,
-            enum: ["PENDIENTE", "EN_REVISION", "OBSERVADO", "APROBADO", "RECHAZADO", "COMPLETADO", "ANULADO"],
-            default: 'PENDIENTE',
-        },
+        // Relaciones (IDs)
+        generadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Generador', required: true },
+        plantaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Planta', required: true },
+        transportistaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transportista', required: true },
+        destinoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Destino', required: true },
 
-        // Paso 1 - Relaciones principales
-        generadorId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Generador',
-            required: true,
-        },
-        plantaId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Planta',
-            required: true,
-        },
-        servicioTransporte: {
-            type: String,
-            enum: ['SERVICIO TOWER', 'SERVICIO EO'], // Agregar enum
-            default: 'SERVICIO TOWER'
-        },
-
-        // Paso 4 - Transportista
-        transportistaId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Transportista',
-            required: true,
-        },
-
-        // Paso 5 - Destino
-        destinoId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Destino',
-            required: true,
-        },
-        tipoManejo: {
-            type: String,
-        },
-        comercializable: {
-            type: Boolean,
-            default: false,
-        },
-
-        // SECCIÓN 2: DATOS DEL RESIDUO PELIGROSO MANEJADO (Paso 2)
+        // Sección 2: Residuo
         residuo: {
             descripcion: { type: String, required: true },
             cantidadTotal: { type: Number, required: true },
-            estadoFisico: {
-                type: String,
-                enum: ['SOLIDO', 'SEMISOLIDO', 'LIQUIDO', 'GAS'],
-                required: true,
-            },
-            tipoRecipiente: { type: String, required: true },
-            materialRecipiente: { type: String, required: true },
+            estadoFisico: { type: String, enum: ['SOLIDO', 'SEMISOLIDO', 'LIQUIDO', 'GAS'], required: true },
+            tipoRecipiente: { type: String },
+            materialRecipiente: { type: String },
             numeroRecipientes: { type: Number, default: 1 },
-            codigoBasilea: { type: String, required: true },
+            codigoBasilea: { type: String },
             subcodigoBasilea: { type: String },
-            informacionAdicional: { type: String },
+            informacionAdicional: { type: String }
         },
 
-        // SECCIÓN 3: CARACTERÍSTICAS DE PELIGROSIDAD (Paso 3)
+        // Sección 3: Peligrosidad
         peligrosidad: {
-            explosivos: { type: Boolean, default: false },
-            oxidantes: { type: Boolean, default: false },
-            gasesToxicos: { type: Boolean, default: false },
-            liquidosInflamables: { type: Boolean, default: false },
-            peroxidosOrganicos: { type: Boolean, default: false },
-            toxicosCronicos: { type: Boolean, default: false },
-            solidosInflamables: { type: Boolean, default: false },
-            toxicosAgudos: { type: Boolean, default: false },
-            ecotoxicos: { type: Boolean, default: false },
-            combustionEspontanea: { type: Boolean, default: false },
-            sustanciasInfecciosas: { type: Boolean, default: false },
-            sustanciasSecundarias: { type: Boolean, default: false },
-            gasesInflamablesAgua: { type: Boolean, default: false },
-            corrosivos: { type: Boolean, default: false },
-            otros: { type: String, default: '' },
+            explosivos: Boolean,
+            oxidantes: Boolean,
+            gasesToxicos: Boolean,
+            liquidosInflamables: Boolean,
+            peroxidosOrganicos: Boolean,
+            toxicosCronicos: Boolean,
+            solidosInflamables: Boolean,
+            toxicosAgudos: Boolean,
+            ecotoxicos: Boolean,
+            combustionEspontanea: Boolean,
+            sustanciasInfecciosas: Boolean,
+            sustanciasSecundarias: Boolean,
+            gasesInflamablesAgua: Boolean,
+            corrosivos: Boolean,
+            otros: String
         },
 
-        // SECCIÓN 3.1: TRANSPORTE (Paso 4 - datos específicos del viaje)
+        // Sección 4: Transporte (incluye datos del viaje y referendo de entrega)
         transporte: {
-            nombreConductor: { type: String, required: true },
-            tipoVehiculo: { type: String, required: true },
-            placaVehiculo: { type: String, required: true },
-            fechaRecepcion: { type: Date, required: true },
-            cantidadRecibida: { type: Number, required: true },
+            // datos del viaje
+            nombreConductor: { type: String },
+            tipoVehiculo: { type: String },
+            placaVehiculo: { type: String },
+            fechaRecepcion: { type: Date },
+            cantidadRecibida: { type: Number },
             observaciones: { type: String },
+            // referendo de entrega
+        },
+        referendoEntrega: {
+            referendo: { type: Boolean, default: false },
+            generadorResponsableManejo: String,
+            firmaGenerador: String,
+            responsableEors: String,
+            firmaResponsableEors: String,
+            dniResponsableEors: String,
+            cargoResponsableEors: String,
+            fechaHora: Date
         },
 
-        // SECCIÓN 3.2: DESTINO FINAL (Paso 5)
+        // Sección 5: Destino final
         destinoFinal: {
-            cantidadEntregada: { type: Number, required: true },
+            cantidadEntregada: { type: Number },
             observaciones: { type: String },
+            // referendo de recepción
+        },
+        referendoRecepcion: {
+            referendo: { type: Boolean, default: false },
+            responsableEorsDestino: String,  // unificar criterio
+            firmaGenerador: String,
+            dniResponsableEorsDestino: String,
+            cargoResponsableEorsDestino: String,
+            fechaHora: Date
         },
 
-        // SECCIÓN 3.3: OTROS MANEJOS (Paso 5)
+        // Sección 5.3: Otros manejos
         otrosManejos: {
-            razonSocialReceptor: { type: String },
-            rucReceptor: { type: String }, // CAMBIAR a String (los RUC pueden tener ceros a la izquierda)
-            correoReceptor: { type: String },
-            telefonoReceptor: { type: String },
+            razonSocialReceptor: String,
+            rucReceptor: String,
+            correoReceptor: String,
+            telefonoReceptor: String,
             comercializacion: { type: Boolean, default: false },
             exportacion: { type: Boolean, default: false },
             otro: { type: Boolean, default: false },
-            tipoManejo: { type: String },
-            direccionDestino: { type: String },
-            documentoAprueba: { type: String },
+            tipoManejo: String,
+            direccionDestino: String,
+            documentoAprueba: String
         },
 
-        // SECCIÓN 4.2: DEVOLUCIÓN DEL MANIFIESTO (Paso 5)
-        devolucionManifiesto: {
-            representanteEors: {
-                nombre: { type: String },
-                dni: { type: String },
-                cargo: { type: String },
-                firma: { type: String },
-            },
-            responsableGenerador: {
-                nombre: { type: String },
-                dni: { type: String },
-                cargo: { type: String },
-                firma: { type: String },
-                fechaDevolucion: { type: Date },
-                horaDevolucion: { type: String },
-            }
+        // Sección 6: Otras obligaciones (devolución del manifiesto)
+        otrasObligaciones: {
+            representanteEors: String,
+            cargoRepresentanteEors: String,
+            dniRepresentanteEors: String,
+            firmaRepresentanteEors: String,
+            generadorResponsableManejo: String,
+            cargoGeneradorResponsableManejo: String,
+            dniGeneradorResponsableManejo: String,
+            firmaGeneradorResponsableManejo: String,
+            fecha: Date,
+            hora: String
         },
 
-        creadoPor: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Employee',
-            required: true,
-        },
-        modificadoPor: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Employee',
-        },
-    },
-    { timestamps: true }
-);
+        // Metadatos
+        creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+        modificadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }
+
+    }, {
+    timestamps: true
+});
 
 const Manifiesto = mongoose.model("Manifiesto", manifiestoSchema);
 module.exports = Manifiesto;

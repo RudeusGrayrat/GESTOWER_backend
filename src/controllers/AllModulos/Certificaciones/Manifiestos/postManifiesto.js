@@ -3,57 +3,51 @@ const Generador = require("../../../../models/AllModulos/Certificacion/Generador
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
 const Planta = require("../../../../models/AllModulos/Certificacion/Plantas");
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
+const generarCorrelativaManifiesto = require("./correlativaManifiesto");
 
 const postManifiesto = async (req, res) => {
     try {
         const {
-            numeroManifiesto,
             año,
             mes,
-            generadorId,
             plantaId,
-            servicioTransporte,
-            transportistaId,
-            destinoId,
-            tipoManejo,
-            comercializable,
+            generadorId,
             residuo,
             peligrosidad,
+            transportistaId,
             transporte,
-            destinoFinal,
-            otrosManejos,
-            devolucionManifiesto,
             referendoEntrega,
+            destinoId,
+            destinoFinal,
             referendoRecepcion,
+            otrosManejos,
+            otrasObligaciones,
             estado,
             creadoPor
         } = req.body;
 
-        // Validaciones de campos requeridos
-        if (!numeroManifiesto || !año || !mes || !generadorId || !plantaId || !transportistaId || !destinoId) {
+        // Validaciones básicas (coinciden con los * del front)
+        if (!año || !mes || !generadorId || !plantaId || !transportistaId || !destinoId) {
             return res.status(400).json({
-                message: "Faltan datos requeridos para crear el manifiesto (generador, planta, transportista, destino)",
+                message: "Faltan datos requeridos: año, mes, generador, planta, transportista, destino",
                 type: "Error"
             });
         }
 
-        // Validar datos del residuo
         if (!residuo?.descripcion || !residuo?.cantidadTotal || !residuo?.estadoFisico || !residuo?.codigoBasilea) {
             return res.status(400).json({
-                message: "Complete todos los datos del residuo (descripción, cantidad, estado físico, código Basilea)",
+                message: "Complete los datos del residuo (descripción, cantidad, estado físico, código Basilea)",
                 type: "Error"
             });
         }
 
-        // Validar datos de transporte
-        if (!transporte?.nombreConductor || !transporte?.tipoVehiculo || !transporte?.placaVehiculo || !transporte?.fechaRecepcion || !transporte?.cantidadRecibida) {
+        if (!transporte?.fechaRecepcion || !transporte?.cantidadRecibida || !transporte?.tipoVehiculo || !transporte?.placaVehiculo) {
             return res.status(400).json({
-                message: "Complete todos los datos del transporte",
+                message: "Complete los datos del transporte (fecha, cantidad, tipo y placa del vehículo)",
                 type: "Error"
             });
         }
 
-        // Validar datos de destino final
         if (!destinoFinal?.cantidadEntregada) {
             return res.status(400).json({
                 message: "Complete la cantidad entregada en destino final",
@@ -61,24 +55,7 @@ const postManifiesto = async (req, res) => {
             });
         }
 
-        // Validar referendos (si vienen completos)
-        // if (referendoEntrega && (!referendoEntrega.nombreGenerador || !referendoEntrega.nombreTransportista)) {
-        //     return res.status(400).json({
-        //         message: "Complete los datos del referendo de entrega",
-        //         type: "Error"
-        //     });
-        // }
-
-        // Verificar si ya existe un manifiesto con el mismo número
-        const findManifiesto = await Manifiesto.findOne({ numeroManifiesto });
-        if (findManifiesto) {
-            return res.status(400).json({
-                message: "El número de manifiesto ya existe",
-                type: "Error"
-            });
-        }
-
-        // Verificar que todas las entidades relacionadas existan
+        // Verificar existencia de entidades relacionadas
         const [generador, planta, transportista, destino] = await Promise.all([
             Generador.findById(generadorId),
             Planta.findById(plantaId),
@@ -99,38 +76,39 @@ const postManifiesto = async (req, res) => {
             });
         }
 
+        // Generar número de manifiesto correlativo
+        const numeroManifiesto = await generarCorrelativaManifiesto(año);
+
+        // Crear el manifiesto con la estructura completa del front
         const newManifiesto = new Manifiesto({
             numeroManifiesto,
             año,
             mes,
             generadorId,
             plantaId,
-            servicioTransporte: servicioTransporte || 'SERVICIO TOWER',
             transportistaId,
             destinoId,
-            tipoManejo: tipoManejo || destino.tipoManejo,
-            comercializable: comercializable || false,
             residuo,
             peligrosidad: peligrosidad || {},
             transporte,
             destinoFinal,
             otrosManejos: otrosManejos || {},
-            devolucionManifiesto: devolucionManifiesto || {},
-            referendoEntrega: referendoEntrega || {},
-            referendoRecepcion: referendoRecepcion || {},
+            referendoEntrega: referendoEntrega || { referendo: false },
+            referendoRecepcion: referendoRecepcion || { referendo: false },
+            otrasObligaciones: otrasObligaciones || {},
             estado: estado || "PENDIENTE",
             creadoPor: creadoPor || req.user?.id
         });
 
         await newManifiesto.save();
 
-        // Poblar los datos para la respuesta
+        // Poblar datos para la respuesta
         const manifiestoCompleto = await Manifiesto.findById(newManifiesto._id)
             .populate('generadorId')
             .populate('plantaId')
             .populate('transportistaId')
             .populate('destinoId')
-            .populate('creadoPor', 'nombre email'); // Populate del usuario creador
+            .populate('creadoPor', 'nombre email');
 
         return res.status(201).json({
             message: "Manifiesto creado exitosamente",
