@@ -5,7 +5,7 @@ const manifiestoSchema = new mongoose.Schema(
         numeroManifiesto: { type: String, required: true, unique: true },
         año: { type: Number, required: true },
         mes: { type: Number, required: true },
-        estado: { type: String, enum: ["PENDIENTE", "EN_REVISION", "OBSERVADO", "APROBADO", "RECHAZADO", "COMPLETADO", "ANULADO"], default: 'PENDIENTE' },
+        estado: { type: String, enum: ["PENDIENTE", "EN REVISION", "OBSERVADO", "SUBSANADO", "APROBADO", "RECHAZADO"], default: 'PENDIENTE' },
 
         // Relaciones (IDs)
         generadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Generador', required: true },
@@ -69,9 +69,9 @@ const manifiestoSchema = new mongoose.Schema(
 
         // Sección 5: Destino final
         destinoFinal: {
+            tipoManejo: String,
             cantidadEntregada: { type: Number },
             observaciones: { type: String },
-            // referendo de recepción
         },
         referendoRecepcion: {
             referendo: { type: Boolean, default: false },

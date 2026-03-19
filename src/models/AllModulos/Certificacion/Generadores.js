@@ -15,10 +15,6 @@ const generadorSchema = mongoose.Schema(
             type: String,
             required: true,
         },
-        direccion: {
-            type: String,
-            required: true,
-        },
         telefono: {
             type: String,
             required: true,
@@ -31,11 +27,25 @@ const generadorSchema = mongoose.Schema(
             type: String,
             required: true,
         },
-        estado: {
-            type: String,
-            enum: ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'],
-            default: 'ACTIVO',
-        },
+        plantas: [{
+            denominacion: { type: String, required: true },
+            tipoPlanta: { type: String, required: true },
+            direccion: { type: String, required: true },
+            ubigeoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ubigeo', required: true },
+            coordenadasUtm: { norte: { type: String }, este: { type: String }, zona: { type: String } },
+            actividadEconomica: { type: String, required: true },
+            sector: { type: String },
+            tieneIga: { type: Boolean, default: false },
+            institucionApruebaIga: { type: String },
+            fechaAprobacionIga: { type: String },
+            numeroResolucionIga: { type: String },
+        }],
+        responsablesTecnicos: [{
+            nombreResponsable: { type: String, required: true },
+            dniResponsable: { type: String, required: true },
+            cargoResponsable: { type: String, required: true },
+            firmaResponsable: { type: String },
+        }]
     },
     { timestamps: true }
 );

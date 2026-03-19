@@ -10,12 +10,15 @@ const postGenerador = async (req, res) => {
             telefono,
             representanteLegal,
             dniRepresentante,
+            plantas,
+            responsablesTecnicos,
             estado
         } = req.body;
 
         if (!razonSocial || !ruc || !correoElectronico || !direccion || !telefono || !representanteLegal || !dniRepresentante) {
             return res.status(400).json({
                 message: "Faltan datos requeridos para crear el generador",
+                type: "Error"
             });
         }
 
@@ -23,6 +26,7 @@ const postGenerador = async (req, res) => {
         if (findGenerador) {
             return res.status(400).json({
                 message: "El generador con este RUC ya existe",
+                type: "Error"
             });
         }
 
@@ -34,17 +38,21 @@ const postGenerador = async (req, res) => {
             telefono,
             representanteLegal,
             dniRepresentante,
+            plantas,
+            responsablesTecnicos,
             estado: estado || "ACTIVO",
         });
 
         await newGenerador.save();
         return res.status(201).json({
             message: "Generador creado exitosamente",
-            data: newGenerador
+            data: newGenerador,
+            type: "Correcto"
         });
     } catch (error) {
         return res.status(500).json({
             message: error.message || "Error al crear el generador",
+            type: "Error"
         });
     }
 };

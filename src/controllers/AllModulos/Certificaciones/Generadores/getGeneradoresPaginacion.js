@@ -32,6 +32,7 @@ const getGeneradorPagination = async (req, res) => {
             Generador.find(query)
                 .skip(page * limit)
                 .limit(parseInt(limit))
+                .populate("plantas.ubigeoId", "departamento provincia distrito")
                 .lean()
                 .sort({ createdAt: -1 }),
             Generador.countDocuments(query),
