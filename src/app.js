@@ -22,8 +22,8 @@ const verifyToken = require("./controllers/auth/midellware");
 // Configuración de CORS para Express
 app.use(fileUpload());
 app.use(morgan("dev"));
-app.use(bodyParser.json());
-
+app.use(express.json({ limit: "10mb" })); // Aumentar el límite de tamaño de JSON
+app.use(express.urlencoded({ limit: "10mb", extended: true })); // Aumentar el límite de tamaño para URL-encoded
 // Middleware de CORS
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -51,7 +51,6 @@ app.use((req, res, next) => {
 });
 
 app.use(cookieParser());
-app.use(express.json());
 app.use("/api", routes);
 
 // Crear el servidor HTTP para Express

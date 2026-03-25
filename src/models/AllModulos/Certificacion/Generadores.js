@@ -44,6 +44,8 @@ const generadorSchema = mongoose.Schema(
             nombreResponsable: { type: String, required: true },
             dniResponsable: { type: String, required: true },
             cargoResponsable: { type: String, required: true },
+            correoResponsable: { type: String },
+            telefonoResponsable: { type: String },
             firmaResponsable: { type: String },
         }]
     },
