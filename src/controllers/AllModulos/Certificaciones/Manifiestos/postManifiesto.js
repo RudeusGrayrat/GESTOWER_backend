@@ -1,7 +1,6 @@
 const Destino = require("../../../../models/AllModulos/Certificacion/Destino");
 const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
-const Planta = require("../../../../models/AllModulos/Certificacion/Plantas");
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 const generarCorrelativaManifiesto = require("./correlativaManifiesto");
 
@@ -58,7 +57,7 @@ const postManifiesto = async (req, res) => {
         // Verificar existencia de entidades relacionadas
         const [generador, planta, transportista, destino] = await Promise.all([
             Generador.findById(generadorId),
-            Planta.findById(plantaId),
+            // Planta.findById(plantaId),
             Transportista.findById(transportistaId),
             Destino.findById(destinoId)
         ]);

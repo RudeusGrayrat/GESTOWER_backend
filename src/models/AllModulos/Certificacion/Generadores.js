@@ -47,7 +47,12 @@ const generadorSchema = mongoose.Schema(
             correoResponsable: { type: String },
             telefonoResponsable: { type: String },
             firmaResponsable: { type: String },
-        }]
+        }],
+        estado: {
+            type: String,
+            enum: ["ACTIVO", "INACTIVO"],
+            default: "ACTIVO",
+        },
     },
     { timestamps: true }
 );

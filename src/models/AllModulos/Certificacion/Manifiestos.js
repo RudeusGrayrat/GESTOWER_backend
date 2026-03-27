@@ -9,7 +9,6 @@ const manifiestoSchema = new mongoose.Schema(
 
         // Relaciones (IDs)
         generadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Generador', required: true },
-        plantaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Planta', required: true },
         transportistaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transportista', required: true },
         destinoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Destino', required: true },
 

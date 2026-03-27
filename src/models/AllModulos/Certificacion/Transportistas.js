@@ -45,14 +45,14 @@ const transportistaSchema = mongoose.Schema(
             explosion: { type: String },
             otrosAccidentes: { type: String },
         },
-        representanteLegal: {
-            nombre: { type: String, required: true },
-            dni: { type: String, required: true },
-        },
-        responsableTecnico: {
-            nombre: { type: String },
-            numeroColegiatura: { type: String },
-        },
+        responsableTecnico: [
+            {
+                nombre: { type: String },
+                dni: { type: String },
+                cargo: { type: String },
+                numeroColegiatura: { type: String },
+            }
+        ],
         generadores: [
             {
                 type: mongoose.Schema.Types.ObjectId,

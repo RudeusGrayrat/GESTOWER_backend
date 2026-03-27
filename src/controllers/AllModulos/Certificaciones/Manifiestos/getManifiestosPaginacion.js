@@ -1,7 +1,6 @@
 const Destino = require("../../../../models/AllModulos/Certificacion/Destino");
 const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
-const Planta = require("../../../../models/AllModulos/Certificacion/Plantas");
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 const escapeRegExp = require("../../../../utils/regex/regex.js");
 
@@ -30,7 +29,7 @@ const getManifiestoPagination = async (req, res) => {
             // Buscar en entidades relacionadas
             const [generadores, plantas, transportistas, destinos] = await Promise.all([
                 Generador.find({ razonSocial: regex }).select("_id"),
-                Planta.find({ denominacion: regex }).select("_id"),
+                // Planta.find({ denominacion: regex }).select("_id"),
                 Transportista.find({ razonSocial: regex }).select("_id"),
                 Destino.find({ razonSocial: regex }).select("_id")
             ]);
