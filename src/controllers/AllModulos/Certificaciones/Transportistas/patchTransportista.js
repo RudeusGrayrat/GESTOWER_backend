@@ -14,6 +14,8 @@ const patchTransportista = async (req, res) => {
         correoElectronico,
         telefono,
         responsableTecnico,
+        representanteLegal,
+        responsables,
         contingencias,
         generadores,
         conductores,
@@ -46,13 +48,25 @@ const patchTransportista = async (req, res) => {
         if (direccion) findTransportista.direccion = direccion;
         if (correoElectronico) findTransportista.correoElectronico = correoElectronico;
         if (telefono) findTransportista.telefono = telefono;
-        if (responsableTecnico) findTransportista.responsableTecnico = responsableTecnico;
+        if (responsableTecnico) {
+            findTransportista.responsableTecnico = {
+                ...findTransportista.responsableTecnico,
+                ...responsableTecnico
+            };
+        }
+        if (representanteLegal) {
+            findTransportista.representanteLegal = {
+                ...findTransportista.representanteLegal,
+                ...representanteLegal
+            };
+        }
         if (contingencias) {
             findTransportista.contingencias = {
                 ...findTransportista.contingencias,
                 ...contingencias
             };
         }
+        if (responsables) findTransportista.responsables = responsables;
         if (generadores) findTransportista.generadores = generadores;
         if (conductores) findTransportista.conductores = conductores;
         if (estado) findTransportista.estado = estado;
