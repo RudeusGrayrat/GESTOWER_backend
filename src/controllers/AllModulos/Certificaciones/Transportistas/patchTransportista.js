@@ -13,7 +13,6 @@ const patchTransportista = async (req, res) => {
         ubigeoId,
         correoElectronico,
         telefono,
-        representanteLegal,
         responsableTecnico,
         contingencias,
         generadores,
@@ -47,18 +46,7 @@ const patchTransportista = async (req, res) => {
         if (direccion) findTransportista.direccion = direccion;
         if (correoElectronico) findTransportista.correoElectronico = correoElectronico;
         if (telefono) findTransportista.telefono = telefono;
-        if (representanteLegal) {
-            findTransportista.representanteLegal = {
-                ...findTransportista.representanteLegal,
-                ...representanteLegal
-            };
-        }
-        if (responsableTecnico) {
-            findTransportista.responsableTecnico = {
-                ...findTransportista.responsableTecnico,
-                ...responsableTecnico
-            };
-        }
+        if (responsableTecnico) findTransportista.responsableTecnico = responsableTecnico;
         if (contingencias) {
             findTransportista.contingencias = {
                 ...findTransportista.contingencias,
