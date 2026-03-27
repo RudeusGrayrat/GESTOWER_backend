@@ -11,7 +11,7 @@ const postGenerador = async (req, res) => {
             telefono, representanteLegal, dniRepresentante, plantas, responsablesTecnicos, estado
         } = req.body;
 
-        if (!razonSocial || !ruc || !correoElectronico || !direccion ||
+        if (!razonSocial || !ruc || !correoElectronico ||
             !telefono || !representanteLegal || !dniRepresentante) {
             return res.status(400).json({
                 message: "Faltan datos requeridos para crear el generador",
