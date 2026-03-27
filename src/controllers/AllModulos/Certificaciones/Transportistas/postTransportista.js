@@ -20,7 +20,7 @@ const postTransportista = async (req, res) => {
             estado
         } = req.body;
 
-        if (!razonSocial || !ruc || !registroEors || !direccion || !ubigeoId || !correoElectronico || !telefono || !responsableTecnico?.nombre || !responsableTecnico?.numeroColegiatura) {
+        if (!razonSocial || !ruc || !registroEors || !direccion || !ubigeoId || !correoElectronico || !telefono) {
             return res.status(400).json({
                 message: "Faltan datos requeridos para crear el transportista",
                 type: "Error"
