@@ -14,6 +14,7 @@ const returnPdf = require("../../controllers/AllModulos/RecursosHumanos/Asistenc
 const getGeneradoresByTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/getGeneradoresByTransportista");
 const patchTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/patchTransportista");
 const patchGenerador = require("../../controllers/AllModulos/Certificaciones/Generadores/patchGenerador");
+const patchDestino = require("../../controllers/AllModulos/Certificaciones/Destinos/patchDestino");
 
 const certificacionesRouter = Router();
 
@@ -34,5 +35,6 @@ certificacionesRouter.post("/returnPdf", returnPdf);
 
 certificacionesRouter.patch("/editTransportista/:transportistaId", patchTransportista)
 certificacionesRouter.patch("/editGenerador/:generadorId", patchGenerador)
+certificacionesRouter.patch("/editDestino/:destinoId", patchDestino)
 
 module.exports = certificacionesRouter;

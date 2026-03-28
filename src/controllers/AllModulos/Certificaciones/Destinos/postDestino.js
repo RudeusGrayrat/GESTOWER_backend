@@ -16,6 +16,7 @@ const postDestino = async (req, res) => {
             telefono,
             representanteLegal,
             responsableTecnico,
+            responsables,
             estado
         } = req.body;
 
@@ -57,6 +58,7 @@ const postDestino = async (req, res) => {
             telefono,
             representanteLegal,
             responsableTecnico: responsableTecnico || {},
+            responsables: responsables || [],
             estado: estado || "ACTIVO",
         });
 

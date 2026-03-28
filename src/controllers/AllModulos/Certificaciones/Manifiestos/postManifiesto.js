@@ -55,25 +55,25 @@ const postManifiesto = async (req, res) => {
         }
 
         // Verificar existencia de entidades relacionadas
-        const [generador, planta, transportista, destino] = await Promise.all([
+        const [generador, transportista,] = await Promise.all([
             Generador.findById(generadorId),
             // Planta.findById(plantaId),
             Transportista.findById(transportistaId),
-            Destino.findById(destinoId)
+            // Destino.findById(destinoId)
         ]);
 
         if (!generador) return res.status(404).json({ message: "Generador no encontrado", type: "Error" });
-        if (!planta) return res.status(404).json({ message: "Planta no encontrada", type: "Error" });
+        // if (!planta) return res.status(404).json({ message: "Planta no encontrada", type: "Error" });
         if (!transportista) return res.status(404).json({ message: "Transportista no encontrado", type: "Error" });
-        if (!destino) return res.status(404).json({ message: "Destino no encontrado", type: "Error" });
+        // if (!destino) return res.status(404).json({ message: "Destino no encontrado", type: "Error" });
 
         // Verificar que la planta pertenezca al generador
-        if (planta.generadorId?.toString() !== generadorId) {
-            return res.status(400).json({
-                message: "La planta no pertenece al generador especificado",
-                type: "Error"
-            });
-        }
+        // if (planta.generadorId?.toString() !== generadorId) {
+        //     return res.status(400).json({
+        //         message: "La planta no pertenece al generador especificado",
+        //         type: "Error"
+        //     });
+        // }
 
         // Generar número de manifiesto correlativo
         const numeroManifiesto = await generarCorrelativaManifiesto(año);

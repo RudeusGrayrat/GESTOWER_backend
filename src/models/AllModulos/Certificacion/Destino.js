@@ -48,6 +48,14 @@ const destinoSchema = mongoose.Schema(
             nombre: { type: String },
             numeroColegiatura: { type: String },
         },
+        responsables: [
+            {
+                nombre: { type: String },
+                dni: { type: String },
+                cargo: { type: String },
+                firmaResponsable: { type: String },
+            }
+        ],
         estado: {
             type: String,
             enum: ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'],

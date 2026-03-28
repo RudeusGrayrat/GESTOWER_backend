@@ -63,7 +63,6 @@ const getManifiestoPagination = async (req, res) => {
         const [data, total] = await Promise.all([
             Manifiesto.find(query)
                 .populate("generadorId")
-                .populate({ path: "plantaId", populate: { path: "ubigeoId" } })
                 .populate({ path: "transportistaId", populate: { path: "ubigeoId" } })
                 .populate("destinoId")
                 .populate("creadoPor", "name lastname")
@@ -77,6 +76,7 @@ const getManifiestoPagination = async (req, res) => {
 
         return res.json({ data, total });
     } catch (error) {
+        console.error("Error al buscar manifiestos:", error);
         return res.status(500).json({ message: error.message || "Error al buscar manifiestos" });
     }
 };
