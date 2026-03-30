@@ -10,8 +10,8 @@ const postManifiesto = async (req, res) => {
             año,
             mes,
             generadorId,
-            responableGestionId,
-            plantaId,
+            responsableGestion,
+            planta,
             residuo,
             peligrosidad,
             transportistaId,
@@ -27,7 +27,7 @@ const postManifiesto = async (req, res) => {
         } = req.body;
 
         // Validaciones básicas (coinciden con los * del front)
-        if (!año || !mes || !generadorId || !plantaId || !transportistaId || !destinoId) {
+        if (!año || !mes || !generadorId || !planta || !transportistaId || !destinoId) {
             return res.status(400).json({
                 message: "Faltan datos requeridos: año, mes, generador, planta, transportista, destino",
                 type: "Error"
@@ -58,7 +58,7 @@ const postManifiesto = async (req, res) => {
         // Verificar existencia de entidades relacionadas
         const [generador, transportista,] = await Promise.all([
             Generador.findById(generadorId),
-            // Planta.findById(plantaId),
+            // Planta.findById(planta),
             Transportista.findById(transportistaId),
             // Destino.findById(destinoId)
         ]);
@@ -85,8 +85,8 @@ const postManifiesto = async (req, res) => {
             año,
             mes,
             generadorId,
-            responableGestionId,
-            plantaId,
+            responsableGestion,
+            planta,
             transportistaId,
             destinoId,
             residuo,
@@ -106,7 +106,6 @@ const postManifiesto = async (req, res) => {
         // Poblar datos para la respuesta
         const manifiestoCompleto = await Manifiesto.findById(newManifiesto._id)
             .populate('generadorId')
-            .populate('plantaId')
             .populate('transportistaId')
             .populate('destinoId')
             .populate('creadoPor', 'nombre email');
