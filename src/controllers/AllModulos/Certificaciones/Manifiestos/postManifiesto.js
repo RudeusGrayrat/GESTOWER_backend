@@ -9,8 +9,9 @@ const postManifiesto = async (req, res) => {
         const {
             año,
             mes,
-            plantaId,
             generadorId,
+            responableGestionId,
+            plantaId,
             residuo,
             peligrosidad,
             transportistaId,
@@ -84,6 +85,7 @@ const postManifiesto = async (req, res) => {
             año,
             mes,
             generadorId,
+            responableGestionId,
             plantaId,
             transportistaId,
             destinoId,

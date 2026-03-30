@@ -4,11 +4,12 @@ const manifiestoSchema = new mongoose.Schema(
     {
         numeroManifiesto: { type: String, required: true, unique: true },
         año: { type: Number, required: true },
-        mes: { type: Number, required: true },
+        mes: { type: String, required: true },
         estado: { type: String, enum: ["PENDIENTE", "EN REVISION", "OBSERVADO", "SUBSANADO", "APROBADO", "RECHAZADO"], default: 'PENDIENTE' },
-
         // Relaciones (IDs)
         generadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Generador', required: true },
+        responableGestionId: { type: mongoose.Schema.Types.ObjectId },
+        plantaId: { type: mongoose.Schema.Types.ObjectId },
         transportistaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transportista', required: true },
         destinoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Destino', required: true },
 
@@ -68,7 +69,7 @@ const manifiestoSchema = new mongoose.Schema(
 
         // Sección 5: Destino final
         destinoFinal: {
-            tipoManejo: String,
+            tipoManejo: { type: String },
             cantidadEntregada: { type: Number },
             observaciones: { type: String },
         },
