@@ -71,6 +71,7 @@ const manifiestoSchema = new mongoose.Schema(
             tipoVehiculo: { type: String },
             placaVehiculo: { type: String },
             fechaRecepcion: { type: Date },
+            horaRecepcion: { type: String },
             cantidadRecibida: { type: Number },
             observaciones: { type: String },
             // referendo de entrega
@@ -98,7 +99,8 @@ const manifiestoSchema = new mongoose.Schema(
             firmaGenerador: String,
             dniResponsableEorsDestino: String,
             cargoResponsableEorsDestino: String,
-            fechaHora: Date
+            fechaReferendo: Date,
+            horaReferendo: String
         },
 
         // Sección 5.3: Otros manejos
