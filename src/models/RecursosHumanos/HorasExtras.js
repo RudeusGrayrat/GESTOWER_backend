@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const horasExtrasSchema = new Schema(
     {
-        colaborador: {
+        solicitante: {
             type: Schema.Types.ObjectId,
             ref: "Employee",
             required: true,
@@ -12,28 +12,41 @@ const horasExtrasSchema = new Schema(
             type: String,
             required: true,
         },
-        horas: {
-            type: Number,
-        },
-        minutos: {
-            type: Number,
-        },
-        minutosTotales: {
-            type: Number,
+        retribucion: {
+            type: String,
+            enum: ["PAGO", "COMPENSACION"],
             required: true,
+        },
+        formaCompensacion: {
+            type: String,
         },
         motivo: {
             type: String,
         },
-        //no se si asistenciaId debería estar o si es relevante
-        asistenciaId: {
-            type: Schema.Types.ObjectId,
-            ref: "AsistenciaColaborador"
-        },
-
+        colaboradores: [
+            {
+                colaborador: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Employee",
+                },
+                horas: {
+                    type: Number,
+                },
+                minutos: {
+                    type: Number,
+                },
+                minutosTotales: {
+                    type: Number,
+                },
+                asistenciaId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "AsistenciaColaborador"
+                },
+            }
+        ],
         estado: {
             type: String,
-            enum: ["PENDIENTE", "APROBADO", "RECHAZADO"],
+            enum: ["PENDIENTE", "ENVIADO", "APROBADO", "RECHAZADO"],
             default: "PENDIENTE",
         },
         creadoPor: {
@@ -45,7 +58,14 @@ const horasExtrasSchema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "Employee",
         },
-
+        rechazadoPor: {
+            type: Schema.Types.ObjectId,
+            ref: "Employee",
+        },
+        enviadoPor: {
+            type: Schema.Types.ObjectId,
+            ref: "Employee",
+        },
     },
     { timestamps: true }
 );

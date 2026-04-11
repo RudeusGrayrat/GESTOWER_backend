@@ -1,43 +1,84 @@
+const dayjs = require("dayjs");
 const HorasExtras = require("../../../../models/RecursosHumanos/HorasExtras");
+const AsistenciaColaborador = require("../../../../models/RecursosHumanos/AsistenciaColaborador");
 
 const patchHorasExtras = async (req, res) => {
 
     const {
         _id,
+        solicitante,
         fecha,
-        horas,
+        retribucion,
+        formaCompensacion,
         motivo,
+        colaboradores,
         estado,
-        aprobadoPor
+        aprobadoPor,
+        rechazadoPor,
+        enviadoPor
     } = req.body;
 
     try {
+        if (!estado) return res.status(400).json({ message: "El estado es obligatorio", type: "Advertencia" });
+        if (!_id) return res.status(400).json({ message: "El ID es obligatorio", type: "Advertencia" });
 
         const horasExtras = await HorasExtras.findById(_id);
 
         if (!horasExtras) {
             return res.status(404).json({ message: "Registro no encontrado", type: "Error" });
         }
+        //buscar con la fecha la asistenciaId y actualizarlo
+        let colaboradoresSinAsistencia = [];
+        if (fecha || colaboradores) {
+            const fechaToString = dayjs(fecha, "YYYY-MM-DD").format("DD/MM/YYYY");
+            for (let i = colaboradores.length - 1; i >= 0; i--) {
+                const colaborador = colaboradores[i];
+                const asistencia = await AsistenciaColaborador.findOne({ colaborador: colaborador.colaborador, fecha: fechaToString });
+                if (asistencia) {
+                    colaborador.asistenciaId = asistencia._id;
+                } else {
+                    colaboradores.splice(i, 1);
+                    colaboradoresSinAsistencia.push(colaborador);
+                }
+            }
+        }
 
-        if (fecha) horasExtras.fecha = fecha;
-        if (horas) horasExtras.horas = horas;
+        if (solicitante) horasExtras.solicitante = solicitante;
+        if (retribucion) horasExtras.retribucion = retribucion;
+        if (formaCompensacion) horasExtras.formaCompensacion = formaCompensacion;
         if (motivo) horasExtras.motivo = motivo;
-
+        if (colaboradores) horasExtras.colaboradores = colaboradores;
         if (estado) horasExtras.estado = estado;
         if (aprobadoPor) horasExtras.aprobadoPor = aprobadoPor;
-
+        if (rechazadoPor) horasExtras.rechazadoPor = rechazadoPor;
+        if (enviadoPor) horasExtras.enviadoPor = enviadoPor;
+        if (colaboradoresSinAsistencia?.length === colaboradores?.length) {
+            return res.status(400).json({
+                message: "Ninguno de los colaboradores tuvo asistencia, no se pueden actualizar las horas extras",
+                type: "Advertencia"
+            });
+        }
         await horasExtras.save();
 
-        return res.status(200).json({
-            message: "Horas extras actualizadas correctamente",
-            horasExtras,
-            type: "Correcto"
-        });
+        if (colaboradoresSinAsistencia?.length > 0) {
+            return res.status(200).json({
+                message: "Horas extras actualizadas, pero algunos colaboradores no tuvieron asistencia y fueron eliminados del registro",
+                horasExtras,
+                colaboradoresSinAsistencia,
+                type: "Advertencia"
+            });
+        }
+        if (colaboradoresSinAsistencia?.length === 0) {
+            return res.status(200).json({
+                message: "Horas extras actualizadas correctamente",
+                horasExtras,
+                type: "Correcto"
+            });
+        }
 
     } catch (error) {
-
+        console.error(error);
         return res.status(500).json({ message: error.message, type: "Error" });
-
     }
 };
 

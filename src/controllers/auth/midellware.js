@@ -7,7 +7,7 @@ const tokenVerify = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   let token =
     req.cookies?.token ||
-    (authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null);
+    (authHeader?.startsWith("Bearer") ? authHeader.split(" ")[1] : null);
 
   if (publicRoutes.some((route) => req.path.startsWith(route))) {
     return next();
