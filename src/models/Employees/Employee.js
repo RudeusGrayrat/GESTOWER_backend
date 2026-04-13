@@ -63,6 +63,9 @@ const employeeSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    area: {
+      type: String,
+    },
     funcion: {
       type: String,
     },

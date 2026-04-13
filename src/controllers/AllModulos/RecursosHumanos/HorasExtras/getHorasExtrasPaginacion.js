@@ -31,7 +31,7 @@ const getHorasExtras = async (req, res) => {
         }
         const [data, total] = await Promise.all([
             HorasExtras.find(query)
-                .populate("solicitante", "name lastname charge documentNumber area")
+                .populate("solicitante", "name lastname charge documentNumber area business")
                 .populate("colaboradores.asistenciaId")
                 .populate("colaboradores.colaborador", "name lastname charge documentNumber")
                 .skip(page * limit)

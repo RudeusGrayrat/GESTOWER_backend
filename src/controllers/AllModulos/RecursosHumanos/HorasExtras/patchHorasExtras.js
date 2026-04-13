@@ -67,7 +67,16 @@ const patchHorasExtras = async (req, res) => {
         }
 
         await horasExtras.save();
-
+        //debo añadir el tiempo de horas extras al modelo de asistencia solo si el estado dice que está aprobado
+        if (estado === "APROBADO" && aprobadoPor) {
+            for (const colaborador of colaboradores) {
+                const asistencia = await AsistenciaColaborador.findById(colaborador.asistenciaId);
+                if (asistencia) {
+                    asistencia.minExtras = colaborador.minutosTotales;
+                    await asistencia.save();
+                }
+            }
+        }
         if (totalColaboradores > 0 && colaboradoresSinAsistencia?.length > 0) {
             return res.status(200).json({
                 message: "Horas extras actualizadas, pero algunos colaboradores no tuvieron asistencia y fueron eliminados del registro",

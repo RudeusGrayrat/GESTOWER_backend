@@ -22,6 +22,7 @@ const updateEmployeePartial = async (req, res) => {
     email,
     location,
     charge,
+    area,
     sueldo,
     user,
     password,
@@ -63,6 +64,7 @@ const updateEmployeePartial = async (req, res) => {
     if (email) userFound.email = email;
     if (location) userFound.location = location;
     if (charge) userFound.charge = charge;
+    if (area) userFound.area = area;
     if (sueldo) userFound.sueldo = sueldo;
     if (user) userFound.user = user;
     if (modules) userFound.modules = modules;

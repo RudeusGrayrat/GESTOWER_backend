@@ -29,10 +29,10 @@ const horasExtrasSchema = new Schema(
                     type: Schema.Types.ObjectId,
                     ref: "Employee",
                 },
-                inicio: {
+                horaInicio: {
                     type: String,
                 },
-                fin: {
+                horaFin: {
                     type: String,
                 },
                 horas: {
