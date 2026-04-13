@@ -25,6 +25,7 @@ const postHorasExtras = async (req, res) => {
         if (!colaboradores || !Array.isArray(colaboradores) || colaboradores.length === 0) {
             return res.status(400).json({ message: "Colaboradores debe ser un arreglo", type: "Advertencia" });
         }
+        const totalColaboradores = colaboradores.length;
         const fechaToString = dayjs(fecha, "YYYY-MM-DD").format("DD/MM/YYYY");
         let colaboradoresSinAsistencia = [];
         for (let i = colaboradores.length - 1; i >= 0; i--) {
@@ -47,14 +48,17 @@ const postHorasExtras = async (req, res) => {
             creadoPor,
             estado
         });
-        if (colaboradoresSinAsistencia.length === colaboradores.length) {
-            return res.status(400).json({ message: "Ninguno de los colaboradores tuvo asistencia, no se pueden registrar las horas extras", type: "Advertencia" });
+        if (colaboradoresSinAsistencia.length === totalColaboradores) {
+            return res.status(400).json({
+                message: "Ninguno de los colaboradores tuvo asistencia en esta fecha",
+                type: "Advertencia"
+            });
         }
         await newHorasExtras.save();
 
         if (colaboradoresSinAsistencia.length > 0) {
             return res.status(201).json({
-                message: "Horas extras registradas, pero algunos colaboradores no tuvieron asistencia y fueron eliminados del registro",
+                message: "Algunos colaboradores no tuvieron asistenicas y fueron eliminados de las horas extras",
                 horasExtras: newHorasExtras,
                 colaboradoresSinAsistencia,
                 type: "Advertencia"

@@ -54,6 +54,10 @@ const horasExtrasSchema = new Schema(
             ref: "Employee",
             required: true,
         },
+        modificadoPor: {
+            type: Schema.Types.ObjectId,
+            ref: "Employee",
+        },
         aprobadoPor: {
             type: Schema.Types.ObjectId,
             ref: "Employee",

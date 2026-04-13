@@ -31,8 +31,9 @@ const getHorasExtras = async (req, res) => {
         }
         const [data, total] = await Promise.all([
             HorasExtras.find(query)
-                .populate("solicitante", "name lastname documentNumber")
-                .populate("colaboradores.colaborador", "name lastname documentNumber")
+                .populate("solicitante", "name lastname charge documentNumber")
+                .populate("colaboradores.asistenciaId")
+                .populate("colaboradores.colaborador", "name lastname charge documentNumber")
                 .skip(page * limit)
                 .limit(parseInt(limit))
                 .sort({ createdAt: -1 }),
