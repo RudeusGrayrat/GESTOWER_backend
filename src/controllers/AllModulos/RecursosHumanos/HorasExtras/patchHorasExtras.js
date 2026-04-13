@@ -39,7 +39,6 @@ const patchHorasExtras = async (req, res) => {
             for (let i = colaboradores.length - 1; i >= 0; i--) {
                 const colaborador = colaboradores[i];
                 const asistencia = await AsistenciaColaborador.findOne({ colaborador: colaborador.colaborador, fecha: fechaToString });
-                console.log("Asistencia encontrada:", asistencia);
                 if (asistencia) {
                     colaborador.asistenciaId = asistencia._id;
                 } else {

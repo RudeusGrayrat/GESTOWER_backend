@@ -29,6 +29,12 @@ const horasExtrasSchema = new Schema(
                     type: Schema.Types.ObjectId,
                     ref: "Employee",
                 },
+                inicio: {
+                    type: String,
+                },
+                fin: {
+                    type: String,
+                },
                 horas: {
                     type: Number,
                 },
