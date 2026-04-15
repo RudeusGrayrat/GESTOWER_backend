@@ -14,7 +14,12 @@ const updateBusinessPartial = async (req, res) => {
     if (ruc) businessFound.ruc = ruc;
     if (razonSocial) businessFound.razonSocial = razonSocial;
     if (domicilioFiscal) businessFound.domicilioFiscal = domicilioFiscal;
-    if (representative) businessFound.representative = representative;
+    if (representative){
+      if (representative.name) businessFound.representative.name = representative.name;
+      if (representative.documentType) businessFound.representative.documentType = representative.documentType;
+      if (representative.documentNumber) businessFound.representative.documentNumber = representative.documentNumber;
+      if (representative.signature) businessFound.representative.signature = representative.signature;
+    }
     if (logo) businessFound.logo = logo;
 
     await businessFound.save();

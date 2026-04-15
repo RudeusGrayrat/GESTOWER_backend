@@ -7,6 +7,7 @@ const postPermiso = require("../../controllers/AllModulos/RecursosHumanos/Permis
 const postHorasExtras = require("../../controllers/AllModulos/RecursosHumanos/HorasExtras/postHorasExtras");
 const patchHorasExtras = require("../../controllers/AllModulos/RecursosHumanos/HorasExtras/patchHorasExtras");
 const patchPermiso = require("../../controllers/AllModulos/RecursosHumanos/Permisos/patchPermisos");
+const generarPdfHE = require("../../controllers/AllModulos/RecursosHumanos/HorasExtras/getPdfHorasExtras");
 
 const recursosHumanosRouter = Router();
 
@@ -14,6 +15,7 @@ recursosHumanosRouter.get("/getContratosPaginacion", getContratosPaginacion);
 recursosHumanosRouter.get("/getBusinessPaginacion", getBusinessPaginacion);
 recursosHumanosRouter.get("/getHorasExtrasPaginacion", getHorasExtras);
 recursosHumanosRouter.get("/getPermisosPaginacion", getPermisos);
+recursosHumanosRouter.get("/getPdfHorasExtras/:id", generarPdfHE);
 
 recursosHumanosRouter.post("/postPermiso", postPermiso);
 recursosHumanosRouter.post("/postHorasExtras", postHorasExtras);

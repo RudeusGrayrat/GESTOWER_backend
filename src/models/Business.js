@@ -16,7 +16,6 @@ const businessSchema = new mongoose.Schema({
   },
   logo: {
     type: String,
-    required: true,
   },
   representative: {
     name: {
@@ -33,7 +32,6 @@ const businessSchema = new mongoose.Schema({
     },
     signature: {
       type: String,
-      required: true,
     },
   },
 }, {

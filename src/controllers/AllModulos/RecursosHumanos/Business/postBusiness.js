@@ -16,8 +16,7 @@ const createBusiness = async (req, res) => {
       return res
         .status(400)
         .json({ message: "El campo representante es obligatorio" });
-    if (!logo)
-      return res.status(400).json({ message: "El campo logo es obligatorio" });
+
     const findBusiness = await Business.findOne({ ruc });
     if (findBusiness)
       return res
