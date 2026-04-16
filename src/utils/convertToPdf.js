@@ -1,51 +1,45 @@
-const axios = require("axios");
-const FormData = require("form-data");
+const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+const { promisify } = require("util");
+const execAsync = promisify(exec);
 
-const convertToPdf = async (input) => {
-  console.time("🚀 Unoserver-Latencia");
-  let wordBuffer;
+const convertToPdf = async (wordBuffer) => {
+  console.time("🚀 Unoserver-Direct-CLI");
+
+  // Creamos rutas temporales únicas para no chocar entre peticiones
+  const tempId = Date.now();
+  const tempDocx = path.join("/tmp", `input_${tempId}.docx`);
+  const tempPdf = path.join("/tmp", `input_${tempId}.pdf`);
 
   try {
-    if (Buffer.isBuffer(input)) {
-      wordBuffer = input;
-    } else if (typeof input === "string" && input.startsWith("http")) {
-      const download = await axios.get(input, { responseType: "arraybuffer" });
-      wordBuffer = Buffer.from(download.data);
-    } else {
-      throw new Error("Entrada no válida.");
-    }
+    // 1. Escribimos el buffer a un archivo temporal rápido
+    fs.writeFileSync(tempDocx, wordBuffer);
 
-    const form = new FormData();
-    // Intentamos con 'file', si falla en el curl, cámbialo a 'data'
-    form.append("file", wordBuffer, {
-      filename: "reporte.docx",
-      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
+    // 2. Ejecutamos unoconvert (el cliente que habla con unoserver-core)
+    // Usamos el puerto por defecto de unoserver (2002)
+    await execAsync(`unoconvert --convert-to pdf ${tempDocx} ${tempPdf}`);
 
-    const response = await axios.post("http://127.0.0.1:2003", form, {
-      headers: form.getHeaders(),
-      responseType: "arraybuffer",
-    });
+    // 3. Leemos el PDF generado
+    const pdfBuffer = fs.readFileSync(tempPdf);
 
-    console.timeEnd("🚀 Unoserver-Latencia");
-    const pdfBuffer = Buffer.from(response.data);
+    console.timeEnd("🚀 Unoserver-Direct-CLI");
 
-    // REVISIÓN DE SEGURIDAD
-    if (pdfBuffer.length < 500) {
-      // Imprimimos el error real que viene de unoserver
-      console.error("⚠️ Contenido recibido de Unoserver:", pdfBuffer.toString());
-      throw new Error("El PDF devuelto es demasiado pequeño o es un error de texto.");
-    }
+    // 4. Limpieza de archivos temporales (importante en VPS)
+    if (fs.existsSync(tempDocx)) fs.unlinkSync(tempDocx);
+    if (fs.existsSync(tempPdf)) fs.unlinkSync(tempPdf);
 
     return pdfBuffer;
 
   } catch (error) {
-    // Evitamos el warning de console.timeEnd
-    try { console.timeEnd("🚀 Unoserver-Latencia"); } catch (e) { }
+    if (console.timeEnd) console.timeEnd("🚀 Unoserver-Direct-CLI");
+    console.error("❌ Error en unoconvert CLI:", error.message);
 
-    const errorData = error.response ? Buffer.from(error.response.data).toString() : error.message;
-    console.error("❌ Error en convertToPdf:", errorData);
-    throw new Error(`Error en conversión: ${errorData}`);
+    // Limpiar aunque falle
+    if (fs.existsSync(tempDocx)) fs.unlinkSync(tempDocx);
+    if (fs.existsSync(tempPdf)) fs.unlinkSync(tempPdf);
+
+    throw new Error("Fallo en la conversión rápida de sistema.");
   }
 };
 
