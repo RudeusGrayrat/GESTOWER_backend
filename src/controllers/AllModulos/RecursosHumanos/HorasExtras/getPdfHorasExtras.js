@@ -1,74 +1,63 @@
-const path = require("path");
-const convertDocx = require("../../../../utils/convertDocx");
-const convertToPdf = require("../../../../utils/convertToPdf");
-const HorasExtras = require("../../../../models/RecursosHumanos/HorasExtras");
+const axios = require("axios");
+const FormData = require("form-data");
 
-const generarPdfHE = async (req, res) => {
+/**
+ * Convierte un documento a PDF. 
+ * Soporta Buffer directo o URL de descarga.
+ */
+const convertToPdf = async (input) => {
+    console.time("🚀 Unoserver-Latencia");
+    let wordBuffer;
+
     try {
-        const { id } = req.params;
-        const rootPath = process.cwd();
-        const templatePath = path.join(rootPath, "templates", "PLANTILLA_HORAS_EXTRAS.docx");
-        if (!id) return res.status(400).json({ message: "El ID es obligatorio", type: "Advertencia" });
-        const findHorasExtras = await HorasExtras.findById(id).populate("solicitante").populate("colaboradores.colaborador").populate("aprobadoPor").populate("rechazadoPor").populate("enviadoPor");
-        if (!findHorasExtras) return res.status(404).json({ message: "Registro no encontrado", type: "Error" });
-        const listColaboradores = findHorasExtras.colaboradores.map((colab) => {
-            const colaboradorData = colab.colaborador || {};
-            const nombre = colaboradorData.name && colaboradorData.lastname ? `${colaboradorData.lastname}, ${colaboradorData.name}` : "";
-            return {
-                nombre: nombre,
-                cargo: colaboradorData?.charge || "",
-                hora_inicio: colab?.horaInicio || "",
-                hora_fin: colab?.horaFin || "",
-                total_horas: `${colab?.horas || 0}h ${colab?.minutos || 0}m`,
-            };
-        });
-        const check = (value) => value ? "X" : "";
-        // 1. Lógica de negocio para el Logo
-        const bSolicitante = findHorasExtras.solicitante?.business || "";
-        // DEFINIMOS bUpper AQUÍ:
-        const bUpper = bSolicitante.toUpperCase();
-
-        let logoEmpresa = "/TOWER_LOGO.png"; // Default
-        if (bUpper.includes("CORPEMSE")) {
-            logoEmpresa = "/CORPEMSE_LOGO.png";
-        } else if (bUpper.includes("LURIN")) {
-            logoEmpresa = "/INVERSIONES_LURIN_LOGO.png";
-        } else if (bUpper.includes("ECOLOGY")) {
-            logoEmpresa = "/ECOLOGY_LOGO.png";
-        } else if (bUpper.includes("LABORATORIO")) {
-            logoEmpresa = "/LADIAMB_LOGO.png";
+        // 1. VALIDACIÓN Y OBTENCIÓN DEL BUFFER
+        if (Buffer.isBuffer(input)) {
+            // Si ya es un buffer (lo que viene de convertDocx)
+            wordBuffer = input;
+        } else if (typeof input === "string" && input.startsWith("http")) {
+            // Si es una URL, descargamos el archivo primero
+            console.log("🔗 Detectada URL, descargando recurso...");
+            const download = await axios.get(input, { responseType: "arraybuffer" });
+            wordBuffer = Buffer.from(download.data);
+        } else {
+            // Si no es ninguno, abortamos antes de tocar el servidor
+            throw new Error("Entrada inválida: Se esperaba un Buffer o una URL válida.");
         }
-        const pathLogo = path.join(rootPath, "templates", "images", logoEmpresa); const data = {
-            logo_empresa: pathLogo,
-            nombre_colaborador: findHorasExtras.solicitante ? `${findHorasExtras.solicitante.lastname}, ${findHorasExtras.solicitante.name}` : "",
-            area_colaborador: findHorasExtras.solicitante?.area ? findHorasExtras.solicitante?.area : "",
-            fecha_solicitud: findHorasExtras.fecha || "",
-            retribucion_pago: check(findHorasExtras.retribucion === "PAGO"),
-            retribucion_compensacion: check(findHorasExtras.retribucion === "COMPENSACION"),
-            foma_compensacion: findHorasExtras.formaCompensacion || "",
-            sustento_requerimiento: findHorasExtras.motivo || "",
-            colaboradores: listColaboradores,
-            // firma_solicitante: "",
-            // firma_jefe_inmediato: "",
-            // fecha_recepcion_rrhh: "",
-        };
-        // PASO 1: Llenar la plantilla
-        const wordBuffer = await convertDocx(data, templatePath);
 
-        // PASO 2: Convertir a PDF (Sin APIs externas, solo tu SO)
-        const pdfBuffer = await convertToPdf(wordBuffer);
-
-        // PASO 3: Enviar
-        res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'inline; filename=reporte.pdf',
+        // 2. PREPARACIÓN PARA UNOSERVER
+        const form = new FormData();
+        form.append("file", wordBuffer, {
+            filename: "document.docx",
+            contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         });
-        res.send(pdfBuffer);
+
+        // 3. LLAMADA A UNOSERVER (Optimizado)
+        const response = await axios.post("http://localhost:2003", form, {
+            headers: form.getHeaders(),
+            responseType: "arraybuffer",
+            timeout: 7000, // Timeout razonable
+        });
+
+        console.timeEnd("🚀 Unoserver-Latencia");
+
+        const pdfBuffer = Buffer.from(response.data);
+
+        // Verificación de tamaño mínimo (evita archivos corruptos de 330 bytes)
+        if (!pdfBuffer || pdfBuffer.length < 500) {
+            throw new Error("El PDF devuelto por Unoserver parece estar corrupto o incompleto.");
+        }
+
+        return pdfBuffer;
 
     } catch (error) {
-        console.error("Error en generarPdfHE:", error);
-        res.status(500).json({ message: error.message, type: "Error" });
+        if (console.timeEnd) console.timeEnd("🚀 Unoserver-Latencia");
+
+        // Log detallado para el administrador (tú)
+        console.error("❌ Error en convertToPdf:", error.message);
+
+        // Re-lanzamos el error para que generarPdfHE lo capture y envíe el 500
+        throw error;
     }
 };
 
-module.exports = generarPdfHE;
+module.exports = convertToPdf;
