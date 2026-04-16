@@ -1,62 +1,51 @@
 const axios = require("axios");
 const FormData = require("form-data");
 
-/**
- * Convierte un documento a PDF. 
- * Soporta Buffer directo o URL de descarga.
- */
 const convertToPdf = async (input) => {
   console.time("🚀 Unoserver-Latencia");
   let wordBuffer;
 
   try {
-    // 1. VALIDACIÓN Y OBTENCIÓN DEL BUFFER
     if (Buffer.isBuffer(input)) {
-      // Si ya es un buffer (lo que viene de convertDocx)
       wordBuffer = input;
     } else if (typeof input === "string" && input.startsWith("http")) {
-      // Si es una URL, descargamos el archivo primero
-      console.log("🔗 Detectada URL, descargando recurso...");
       const download = await axios.get(input, { responseType: "arraybuffer" });
       wordBuffer = Buffer.from(download.data);
     } else {
-      // Si no es ninguno, abortamos antes de tocar el servidor
-      throw new Error("Entrada inválida: Se esperaba un Buffer o una URL válida.");
+      throw new Error("Entrada no válida.");
     }
 
-    // 2. PREPARACIÓN PARA UNOSERVER
     const form = new FormData();
+    // Intentamos con 'file', si falla en el curl, cámbialo a 'data'
     form.append("file", wordBuffer, {
-      filename: "document.docx",
+      filename: "reporte.docx",
       contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
 
-    // 3. LLAMADA A UNOSERVER (Optimizado)
-    const response = await axios.post("http://localhost:2003", form, {
+    const response = await axios.post("http://127.0.0.1:2003", form, {
       headers: form.getHeaders(),
       responseType: "arraybuffer",
-      timeout: 7000, // Timeout razonable
     });
 
     console.timeEnd("🚀 Unoserver-Latencia");
-
     const pdfBuffer = Buffer.from(response.data);
 
-    // Verificación de tamaño mínimo (evita archivos corruptos de 330 bytes)
-    if (!pdfBuffer || pdfBuffer.length < 500) {
-      throw new Error("El PDF devuelto por Unoserver parece estar corrupto o incompleto.");
+    // REVISIÓN DE SEGURIDAD
+    if (pdfBuffer.length < 500) {
+      // Imprimimos el error real que viene de unoserver
+      console.error("⚠️ Contenido recibido de Unoserver:", pdfBuffer.toString());
+      throw new Error("El PDF devuelto es demasiado pequeño o es un error de texto.");
     }
 
     return pdfBuffer;
 
   } catch (error) {
-    if (console.timeEnd) console.timeEnd("🚀 Unoserver-Latencia");
+    // Evitamos el warning de console.timeEnd
+    try { console.timeEnd("🚀 Unoserver-Latencia"); } catch (e) { }
 
-    // Log detallado para el administrador (tú)
-    console.error("❌ Error en convertToPdf:", error.message);
-
-    // Re-lanzamos el error para que generarPdfHE lo capture y envíe el 500
-    throw error;
+    const errorData = error.response ? Buffer.from(error.response.data).toString() : error.message;
+    console.error("❌ Error en convertToPdf:", errorData);
+    throw new Error(`Error en conversión: ${errorData}`);
   }
 };
 
