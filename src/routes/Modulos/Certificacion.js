@@ -10,11 +10,11 @@ const postTransportista = require("../../controllers/AllModulos/Certificaciones/
 const postUbigeo = require("../../controllers/AllModulos/Certificaciones/Ubigeo/postUbigeo");
 const postDestino = require("../../controllers/AllModulos/Certificaciones/Destinos/postDestino");
 const postUbigeosBatch = require("../../controllers/AllModulos/Certificaciones/Ubigeo/postUbigeoBatch");
-const returnPdf = require("../../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/returnPdf");
 const getGeneradoresByTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/getGeneradoresByTransportista");
 const patchTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/patchTransportista");
 const patchGenerador = require("../../controllers/AllModulos/Certificaciones/Generadores/patchGenerador");
 const patchDestino = require("../../controllers/AllModulos/Certificaciones/Destinos/patchDestino");
+const generarPDFManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/generarPDFManifiesto");
 
 const certificacionesRouter = Router();
 
@@ -24,6 +24,7 @@ certificacionesRouter.get("/getGeneradoresByTransportista/:transportistaId", get
 certificacionesRouter.get("/getTransportistasPaginacion", getTransportistaPagination);
 certificacionesRouter.get("/getDestinosPaginacion", getDestinoPagination);
 certificacionesRouter.get("/getUbigeoPaginacion", getUbigeoPagination);
+certificacionesRouter.get("/getpdfManifiesto/:id", generarPDFManifiesto);
 
 certificacionesRouter.post("/postGenerador", postGenerador);
 certificacionesRouter.post("/postManifiesto", postManifiesto);
@@ -31,7 +32,6 @@ certificacionesRouter.post("/postTransportista", postTransportista);
 certificacionesRouter.post("/postUbigeo", postUbigeo);
 certificacionesRouter.post("/postUbigeosBatch", postUbigeosBatch);
 certificacionesRouter.post("/postDestino", postDestino);
-certificacionesRouter.post("/returnPdf", returnPdf);
 
 certificacionesRouter.patch("/editTransportista/:transportistaId", patchTransportista)
 certificacionesRouter.patch("/editGenerador/:generadorId", patchGenerador)

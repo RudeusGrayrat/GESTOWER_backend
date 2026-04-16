@@ -47,7 +47,7 @@ const patchHorasExtras = async (req, res) => {
                 }
             }
         }
-        if (fecha != horasExtras.fecha) horasExtras.fecha = fecha;
+        if (fecha && fecha != horasExtras.fecha) horasExtras.fecha = fecha;
         if (solicitante) horasExtras.solicitante = solicitante;
         if (retribucion) horasExtras.retribucion = retribucion;
         if (formaCompensacion) horasExtras.formaCompensacion = formaCompensacion;
