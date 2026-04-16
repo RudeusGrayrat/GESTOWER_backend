@@ -2,7 +2,7 @@ const axios = require("axios");
 const FormData = require("form-data");
 
 const convertToPdf = async (wordBuffer) => {
-  console.time("🚀 empieza la Ejecución unoserver");
+  console.time("🚀 Ejecución unoserver");
   try {
     const form = new FormData();
     form.append("file", wordBuffer, {
