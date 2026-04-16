@@ -1,29 +1,29 @@
-const libre = require("libreoffice-convert");
+const axios = require("axios");
+const FormData = require("form-data");
 
 const convertToPdf = async (wordBuffer) => {
-  console.log("--- Inicio de Conversión ---");
-
-  console.time("⏱️ 1. Preparación de buffer");
-  console.timeEnd("⏱️ 1. Preparación de buffer");
-
-  console.time("🚀 2. Ejecución LibreOffice");
+  console.time("🚀 Ejecución unoserver");
   try {
-    const pdfBuffer = await new Promise((resolve, reject) => {
-      libre.convert(wordBuffer, ".pdf", undefined, (err, result) => {
-        if (err) return reject(err);
-        resolve(result);
-      });
+    const form = new FormData();
+    form.append("file", wordBuffer, {
+      filename: "document.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
-    console.timeEnd("🚀 2. Ejecución LibreOffice");
 
+    const response = await axios.post("http://localhost:2003", form, {
+      headers: form.getHeaders(),
+      responseType: "arraybuffer",
+      timeout: 10000,
+    });
+
+    console.timeEnd("🚀 Ejecución unoserver");
+
+    const pdfBuffer = Buffer.from(response.data);
     if (!pdfBuffer || pdfBuffer.length === 0) throw new Error("PDF Vacío");
-
-    console.time("📂 3. Finalización y envío");
-    console.timeEnd("📂 3. Finalización y envío");
 
     return pdfBuffer;
   } catch (error) {
-    console.timeEnd("🚀 2. Ejecución LibreOffice");
+    console.timeEnd("🚀 Ejecución unoserver");
     throw error;
   }
 };
