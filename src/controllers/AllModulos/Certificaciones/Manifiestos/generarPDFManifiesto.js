@@ -8,7 +8,6 @@ const path = require("path");
 const generarPDFManifiesto = async (req, res) => {
     try {
         const { id } = req.params;
-        console.log("Datos recibidos para generar PDF:", { id, data });
         const rootPath = process.cwd();
         if (!id) {
             console.warn("ID del manifiesto no proporcionado en la solicitud");
