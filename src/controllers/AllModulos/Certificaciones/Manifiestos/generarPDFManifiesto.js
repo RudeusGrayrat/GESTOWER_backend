@@ -2,6 +2,7 @@ const dayjs = require("dayjs");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
 const convertToPdf = require("../../../../utils/convertToPdf");
 const convertDocx = require("../../../../utils/convertDocx");
+const path = require("path");
 
 
 const generarPDFManifiesto = async (req, res) => {
