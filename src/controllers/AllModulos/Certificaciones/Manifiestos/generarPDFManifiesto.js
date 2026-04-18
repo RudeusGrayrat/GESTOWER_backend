@@ -11,11 +11,13 @@ const generarPDFManifiesto = async (req, res) => {
         const rootPath = process.cwd();
         const templatePath = path.join(rootPath, "templates", "PLANTILLA_MANIFIESTO_WORD_PENDIENTE.docx");
         if (!id) {
+            console.warn("ID del manifiesto no proporcionado en la solicitud");
             return res.status(400).json({ message: "ID del manifiesto es obligatorio", type: "Advertencia" });
         }
 
         const findManifiesto = await Manifiesto.findById(id);
         if (!findManifiesto) {
+            console.warn(`Manifiesto con ID ${id} no encontrado en la base de datos`);
             return res.status(404).json({ message: "Manifiesto no encontrado", type: "Error" });
         }
         let dataDocx;
@@ -232,6 +234,7 @@ const generarPDFManifiesto = async (req, res) => {
         const convert = await convertToPdf(docxWord);
 
         if (!convert) {
+            console.error("La conversión a PDF no generó un resultado válido");
             return res.status(500).json({ message: "Error al convertir el documento a PDF", type: "Error" });
         }
         res.set({
