@@ -15,6 +15,7 @@ const patchTransportista = require("../../controllers/AllModulos/Certificaciones
 const patchGenerador = require("../../controllers/AllModulos/Certificaciones/Generadores/patchGenerador");
 const patchDestino = require("../../controllers/AllModulos/Certificaciones/Destinos/patchDestino");
 const generarPDFManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/generarPDFManifiesto");
+const patchManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/patchManifiesto");
 
 const certificacionesRouter = Router();
 
@@ -36,5 +37,6 @@ certificacionesRouter.post("/postDestino", postDestino);
 certificacionesRouter.patch("/editTransportista/:transportistaId", patchTransportista)
 certificacionesRouter.patch("/editGenerador/:generadorId", patchGenerador)
 certificacionesRouter.patch("/editDestino/:destinoId", patchDestino)
+certificacionesRouter.patch("/patchManifiesto/:manifiestoId", patchManifiesto)
 
 module.exports = certificacionesRouter;

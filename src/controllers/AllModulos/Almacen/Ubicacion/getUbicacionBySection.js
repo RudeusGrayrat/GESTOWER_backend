@@ -7,6 +7,7 @@ const getUbicacionByParams = async (req, res) => {
     const { zonaId, rack, nivel, seccion, almacenId } = req.query;
 
     const query = {};
+
     if (zonaId) query.zonaId = zonaId;
     if (rack) query.rack = rack;
     if (nivel) query.nivel = parseInt(nivel);
@@ -14,22 +15,28 @@ const getUbicacionByParams = async (req, res) => {
 
     let ubicacion = await Ubicacion.find(query)
       .populate("zonaId")
-      .populate("productos.productoId");
+      // CAMBIO: antes era productos.productoId
+      .populate("bienes.movimientoId");
+
+    // CAMBIO: filtro por almacenId si se envía
     if (almacenId) {
       ubicacion = ubicacion.filter(
         (u) => u.zonaId && u.zonaId.almacenId?.toString() === almacenId
       );
     }
 
-    if (!ubicacion) {
+    // CAMBIO: validación correcta para arrays
+    if (!ubicacion.length) {
       return res.status(404).json({ message: "Ubicación no encontrada" });
     }
 
     return res.status(200).json(ubicacion);
   } catch (err) {
-    return res
-      .status(500)
-      .json({ message: err.message || "Error al buscar la ubicación" });
+    console.error("Error en getUbicacionByParams:", err);
+
+    return res.status(500).json({
+      message: err.message || "Error al buscar la ubicación",
+    });
   }
 };
 

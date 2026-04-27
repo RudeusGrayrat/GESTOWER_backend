@@ -48,7 +48,9 @@ const postBoletaDePagos = async (req, res) => {
     const boleta = new BoletaDePagos({
       correlativa,
       fechaBoletaDePago,
-      colaborador,
+      colaborador: colaborador._id,
+      empresaColaborador: colaborador.business,
+      fechaIngresoColaborador: colaborador?.dateStart,
       diasTrabajados,
       diasSubsidiados,
       horasTrabajadas,

@@ -2,15 +2,17 @@ const StockAlmacen = require("../../../../models/AllModulos/Almacen/Stock");
 
 const getStockByParams = async (req, res) => {
   try {
-    const { contratoId, productoId } = req.query;
+    const { contratoId, bienId, movimientoId } = req.query; // MODIFICADO
+
     const query = {};
+
     if (contratoId) query.contratoId = contratoId;
-    //ahora ya no estrá la ubicación en stock
-    if (productoId) query.productoId = productoId;
+    if (bienId) query.bienId = bienId; // MODIFICADO
+    if (movimientoId) query.movimientoId = movimientoId; // MODIFICADO
 
     const Stock = await StockAlmacen.find(query)
-      .populate("productoId")
       .populate("movimientoId");
+
     return res.status(200).json({
       message: "Stock obtenidos correctamente",
       data: Stock,
@@ -19,7 +21,7 @@ const getStockByParams = async (req, res) => {
   } catch (err) {
     return res
       .status(500)
-      .json({ message: err.message || "Error al buscar la Stock" });
+      .json({ message: err.message || "Error al buscar la Stock", type: "Error" });
   }
 };
 

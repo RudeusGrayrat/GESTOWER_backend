@@ -133,8 +133,12 @@ const manifiestoSchema = new mongoose.Schema(
 
         // Metadatos
         creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
-        modificadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }
-
+        modificadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+        aprobadorPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+        rechazadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+        subsanadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+        observacion: { type: String },
+        observadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
     }, {
     timestamps: true
 });

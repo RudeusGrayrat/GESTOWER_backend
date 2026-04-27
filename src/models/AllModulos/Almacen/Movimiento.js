@@ -1,5 +1,34 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
+const descripcionBienesSchema = new Schema(
+  {
+    item: { type: Number, required: true },
+
+    descripcion: { type: String, required: true },
+    unidadDeMedida: { type: String, required: true },
+
+    cantidadIngresada: { type: Number },
+    cantidadDisponible: { type: Number },
+
+    pesoNeto: String,
+    pesoBruto: String,
+
+    estadoEnvase: String,
+    observaciones: String,
+
+    subItem: {
+      type: String,
+      enum: ["1.1", "1.2", "1.3"],
+    },
+
+    // estado: {
+    //   type: String,
+    //   enum: ["EN_CUSTODIA", "PARCIAL", "RETIRADO"],
+    //   default: "EN_CUSTODIA",
+    // },
+  },
+  { _id: true }
+);
 
 const movimientoSchema = new Schema(
   {
@@ -22,24 +51,7 @@ const movimientoSchema = new Schema(
       registroOCIP: { type: String, required: true },
       estadoActa: String,
     },
-    descripcionBienes: [
-      {
-        item: Number,
-        productoId: {
-          type: Schema.Types.ObjectId,
-          ref: "ProductoAlmacen",
-          required: true,
-        },
-        cantidad: { type: Number, required: true },
-        pesoNeto: String,
-        pesoBruto: String,
-        descripcion: String,
-        estadoEnvase: String,
-        observaciones: String,
-        unidadDeMedida: String,
-        subItem: String,
-      },
-    ],
+    descripcionBienes: [descripcionBienesSchema],
     detallesDePeso: String,
     referenciaImagen: {
       type: String,
@@ -61,6 +73,19 @@ const movimientoSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Employee",
       required: true,
+    },
+    actualizadoPor: {
+      type: Schema.Types.ObjectId,
+      ref: "Employee",
+    },
+    anuladoPor: {
+      type: Schema.Types.ObjectId,
+      ref: "Employee",
+    },
+    estado: {
+      type: String,
+      enum: ["ACTIVO", "ANULADO", "PENDIENTE"],
+      default: "PENDIENTE",
     },
   },
   { timestamps: true }

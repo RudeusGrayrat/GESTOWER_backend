@@ -8,22 +8,45 @@ const ubicacionSchema = new Schema(
       ref: "Zona",
       required: true,
     },
-    productos: [
+
+    bienes: [
       {
-        productoId: {
+        bienId: {
           type: Schema.Types.ObjectId,
-          ref: "ProductoAlmacen",
           required: true,
         },
-        cantidad: Number,
+
+        movimientoId: {
+          type: Schema.Types.ObjectId,
+          ref: "Movimiento",
+          required: true,
+        },
+
+        descripcion: {
+          type: String,
+          required: true,
+        },
+
+        cantidad: {
+          type: Number,
+          required: true,
+        },
+
         _id: false,
       },
     ],
+
     rack: String,
     nivel: Number,
     seccion: Number,
-    porcentaje: { type: Number, default: 0 },
+
+    porcentaje: {
+      type: Number,
+      default: 0,
+    },
+
     observaciones: String,
+
     estado: {
       type: String,
       enum: [
@@ -36,10 +59,12 @@ const ubicacionSchema = new Schema(
       ],
       default: "LIBRE",
     },
+
     actualizadoPor: {
       type: Schema.Types.ObjectId,
       ref: "Employee",
     },
+
     creadoPor: {
       type: Schema.Types.ObjectId,
       ref: "Employee",
@@ -48,5 +73,4 @@ const ubicacionSchema = new Schema(
   { timestamps: true }
 );
 
-const Ubicacion = mongoose.model("Ubicacion", ubicacionSchema);
-module.exports = Ubicacion;
+module.exports = mongoose.model("Ubicacion", ubicacionSchema);

@@ -1,48 +1,58 @@
 const Movimiento = require("../../../../models/AllModulos/Almacen/Movimiento");
 const generarCorrelativa = require("./correlativa");
+const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
+
+const cleanBase64 = (str) => str?.includes(",") ? str.split(",")[1] : str;
 
 const createMovimiento = async (req, res) => {
-  const { body } = req;
+  let uploadedPublicId = null; // Para control de errores
 
   try {
-    if (!body || !body.movimiento || !body.contratoId) {
-      return res
-        .status(400)
-        .json({ message: "Faltan datos requeridos para crear el movimiento" });
+    const { body } = req;
+
+    if (!body || !body.movimiento || !body.contratoId || !body.sedeId || !body.descripcionBienes || body.descripcionBienes.length === 0 || body.creadoPor === undefined) {
+      throw new Error("Faltan datos requeridos");
     }
-    if (body.movimiento === "SALIDA" && !body.codigoIngreso) {
-      return res.status(400).json({
-        message: "Falta el código de ingreso para el movimiento de salida",
-      });
+
+    // --- Subida de Imagen a Cloudinary ---
+    let imagenUrl = body.referenciaImagen;
+    if (body.referenciaImagen && body.referenciaImagen.startsWith("data:image")) {
+      const fileBuffer = Buffer.from(cleanBase64(body.referenciaImagen), "base64");
+      const fileName = `movimiento_${body.movimiento}_${Date.now()}`;
+      const result = await uploadImage(fileBuffer, fileName);
+
+      imagenUrl = result.secure_url;
+      uploadedPublicId = extractPublicId(result.secure_url);
     }
-    if (body.movimiento === "INGRESO" && body.numeroDeActa) {
-      const findMovimiento = await Movimiento.findOne({ numeroDeActa: body.numeroDeActa });
-      if (findMovimiento) {
-        return res.status(400).json({
-          message: "Ya existe un movimiento con ese número de acta",
-        });
-      }
-    }
+
+    // Generar correlativa según el tipo (INGRESO/SALIDA)
     const correlativa = await generarCorrelativa(
       body.movimiento,
       body.contrato,
       body.contratoId
     );
-    if (!correlativa) {
-      return res.status(500).json({
-        message: "Error al generar la correlativa del movimiento",
-      });
-    }
-    body.correlativa = correlativa;
-    const reponse = await Movimiento.create(body);
+
+    const movimientoData = {
+      ...body,
+      referenciaImagen: imagenUrl, // Guardamos la URL de Cloudinary
+      correlativa,
+      estado: body.estado || "PENDIENTE",
+    };
+
+    const movimiento = await Movimiento.create(movimientoData);
+
     return res.status(201).json({
-      message: `Movimiento de tipo ${body.movimiento} creado exitosamente`,
-      data: reponse,
+      message: `Movimiento ${body.movimiento} registrado pendiente de aprobación`,
+      data: movimiento,
+      type: "Correcto",
     });
+
   } catch (err) {
-    return res
-      .status(500)
-      .json({ message: err.message || "Error al crear el movimiento" });
+    // Si hubo un error y la imagen se subió, la borramos
+    if (uploadedPublicId) {
+      await deleteImage(uploadedPublicId);
+    }
+    return res.status(500).json({ message: err.message, type: "Error" });
   }
 };
 

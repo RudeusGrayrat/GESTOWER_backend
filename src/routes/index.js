@@ -74,7 +74,6 @@ const getAllZonas = require("../controllers/AllModulos/Almacen/Ubicacion/getAllZ
 const postZonaAlmacen = require("../controllers/AllModulos/Almacen/Ubicacion/postZona");
 const deleteZonaAlmacen = require("../controllers/AllModulos/Almacen/Ubicacion/deleteZona");
 const postUbicacion = require("../controllers/AllModulos/Almacen/Ubicacion/postUbicacion");
-const postProductosAlmacen = require("../controllers/AllModulos/Almacen/Producto/postProductos");
 const deleteNaveAlmacen = require("../controllers/AllModulos/Almacen/Almacen/deleteAlmacen");
 const deleteSedeAlmacen = require("../controllers/AllModulos/Almacen/Ubicacion/deleteSede");
 const getUbicacionByParams = require("../controllers/AllModulos/Almacen/Ubicacion/getUbicacionBySection");
@@ -83,7 +82,6 @@ const postStockAlmacen = require("../controllers/AllModulos/Almacen/Stock/postSt
 const deleteMovimientoAlmacen = require("../controllers/AllModulos/Almacen/Movimientos/deleteMovimiento");
 const getStockByParams = require("../controllers/AllModulos/Almacen/Stock/getStockParams");
 const getAsistenciaByParams = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/getAsistenciaByParams");
-const getProducto = require("../controllers/AllModulos/Almacen/Producto/getProducto");
 const getStockProductoUbicacion = require("../controllers/AllModulos/Almacen/Stock/getStockProductoUbicacion");
 const patchStockAlmacen = require("../controllers/AllModulos/Almacen/Stock/patchStock");
 const patchMovimiento = require("../controllers/AllModulos/Almacen/Movimientos/patchMovimiento");
@@ -99,7 +97,6 @@ const getSedePagination = require("../controllers/AllModulos/Almacen/Ubicacion/g
 const deleteContratoAlmacen = require("../controllers/AllModulos/Almacen/Contrato/deleteContrato");
 const getContratoAlmacenPagination = require("../controllers/AllModulos/Almacen/Contrato/getContratoPagiancion");
 const deleteStockAlmacen = require("../controllers/AllModulos/Almacen/Stock/deleteStockAlmacen");
-const patchProductoAlmacen = require("../controllers/AllModulos/Almacen/Producto/putProductos");
 const sistemasRouter = require("./Modulos/sistemas");
 const recursosHumanosRouter = require("./Modulos/RecursosHumanos");
 const herramientasRouter = require("./Modulos/Herramientas");
@@ -135,10 +132,8 @@ router.post("/postMovimientoAlmacen", createMovimiento);
 router.post("/postNavesAlmacen", postAlmacen);
 router.post("/postZonaAlmacen", postZonaAlmacen);
 router.post("/postUbicacionProducto", postUbicacion);
-router.post("/postProductoAlmacen", postProductosAlmacen);
 router.post("/postStockAlmacen", postStockAlmacen);
 
-router.patch("/patchProductoAlmacen", patchProductoAlmacen);
 router.patch("/patchMovimientoAlmacen", patchMovimiento);
 router.patch("/patchStockAlmacen", patchStockAlmacen);
 router.patch("/patchUbicacionProducto", patchUbicacion);
@@ -182,7 +177,6 @@ router.get("/getZonasByParams", getZonasByParams);
 router.get("/getEmployeeByParams", getEmployeeByParams);
 router.get("/getBoletaDePagoByParams", getBoletaDePagoByParams);
 router.get("/getStockProductoUbicacion", getStockProductoUbicacion);
-router.get("/getProductoAlmacen", getProducto);
 router.get("/getAsistenciaByParams", getAsistenciaByParams);
 router.get("/getStockByParams", getStockByParams);
 router.get("/getStockAlmacen", getStockAlmacen);

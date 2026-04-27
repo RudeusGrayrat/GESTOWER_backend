@@ -16,6 +16,12 @@ const boletaDePagosSchema = mongoose.Schema(
       ref: "Employee",
       required: true,
     },
+    empresaColaborador: {
+      type: String,
+    },
+    fechaIngresoColaborador: {
+      type: String,
+    },
     envio: {
       type: String,
     },

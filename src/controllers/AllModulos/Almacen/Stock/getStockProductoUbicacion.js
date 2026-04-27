@@ -1,25 +1,33 @@
+
 const StockAlmacen = require("../../../../models/AllModulos/Almacen/Stock");
 
 const getStockProductoUbicacion = async (req, res) => {
     try {
-        console.log("ENTRAMOS A GET STOCK PRODUCTO UBICACION");
-        const { productoId, ubicacionId } = req.query;
-        console.log(req.query);
-        if (!productoId || !ubicacionId) {
-            return res.status(400).json({ message: "Faltan parámetros: productoId o ubicacionId" });
+        const { bienId } = req.query; // MODIFICADO
+
+        if (!bienId) {
+            return res.status(400).json({
+                message: "Falta parámetro bienId",
+                type: "Error",
+            });
         }
 
-        const stock = await StockAlmacen.findOne({ productoId, ubicacionId });
+        const stock = await StockAlmacen.findOne({ bienId }); // MODIFICADO
 
         if (!stock) {
-            return res.status(200).json(null); // No hay stock en esa ubicación
+            return res.status(200).json({
+                message: "No se encontró stock para el producto en esa ubicación",
+                type: "Correcto",
+            });
         }
 
         return res.status(200).json(stock);
     } catch (error) {
-        console.error("Error en getStockProductoUbicacion:", error);
-        return res.status(500).json({ message: "Error al buscar el stock" });
+        return res.status(500).json({
+            message: "Error al buscar el stock",
+            type: "Error",
+        });
     }
 };
 
-module.exports = getStockProductoUbicacion
+module.exports = getStockProductoUbicacion;
