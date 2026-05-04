@@ -34,7 +34,7 @@ const movimientoSchema = new Schema(
   {
     movimiento: {
       type: String,
-      enum: ["INGRESO", "SALIDA"],
+      enum: ["INGRESO", "SALIDA", "MERGE"],
       required: true,
     },
     correlativa: { type: String, required: true, unique: true },
@@ -78,13 +78,13 @@ const movimientoSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Employee",
     },
-    anuladoPor: {
+    rechazadoPor: {
       type: Schema.Types.ObjectId,
       ref: "Employee",
     },
     estado: {
       type: String,
-      enum: ["ACTIVO", "ANULADO", "PENDIENTE"],
+      enum: ["APROBADO", "RECHAZADO", "PENDIENTE"],
       default: "PENDIENTE",
     },
   },

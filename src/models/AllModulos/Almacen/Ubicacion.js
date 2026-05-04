@@ -11,23 +11,17 @@ const ubicacionSchema = new Schema(
 
     bienes: [
       {
-        bienId: {
+        stockId: {
           type: Schema.Types.ObjectId,
           required: true,
+          ref: "Stock",
         },
-
-        movimientoId: {
-          type: Schema.Types.ObjectId,
-          ref: "Movimiento",
-          required: true,
-        },
-
         descripcion: {
           type: String,
           required: true,
         },
 
-        cantidad: {
+        cantidadIngresada: {
           type: Number,
           required: true,
         },

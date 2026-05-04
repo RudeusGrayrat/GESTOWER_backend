@@ -32,6 +32,7 @@ const stockSchema = new Schema(
       type: [
         {
           fecha: { type: Date, default: Date.now },
+          cantidadIngresada: Number,
           cantidadDisponible: Number,
           ubicacion: String,
           actualizadoPor: { type: Schema.Types.ObjectId, ref: "Employee" },

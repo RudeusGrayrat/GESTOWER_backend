@@ -1,11 +1,8 @@
-// controllers/ubicacion/getUbicacionByParams.js
-
 const Ubicacion = require("../../../../models/AllModulos/Almacen/Ubicacion");
 
 const getUbicacionByParams = async (req, res) => {
   try {
     const { zonaId, rack, nivel, seccion, almacenId } = req.query;
-
     const query = {};
 
     if (zonaId) query.zonaId = zonaId;
@@ -13,30 +10,26 @@ const getUbicacionByParams = async (req, res) => {
     if (nivel) query.nivel = parseInt(nivel);
     if (seccion) query.seccion = parseInt(seccion);
 
-    let ubicacion = await Ubicacion.find(query)
+    let ubicaciones = await Ubicacion.find(query)
       .populate("zonaId")
-      // CAMBIO: antes era productos.productoId
-      .populate("bienes.movimientoId");
+      .populate({
+        path: "bienes.stockId",
+        populate: { path: "movimientoId", select: "correlativa numeroDeActa" }
+      });
 
-    // CAMBIO: filtro por almacenId si se envía
     if (almacenId) {
-      ubicacion = ubicacion.filter(
+      ubicaciones = ubicaciones.filter(
         (u) => u.zonaId && u.zonaId.almacenId?.toString() === almacenId
       );
     }
 
-    // CAMBIO: validación correcta para arrays
-    if (!ubicacion.length) {
-      return res.status(404).json({ message: "Ubicación no encontrada" });
+    if (!ubicaciones.length) {
+      return res.status(404).json({ message: "Ubicación no encontrada", type: "Error" });
     }
 
-    return res.status(200).json(ubicacion);
+    return res.status(200).json(ubicaciones);
   } catch (err) {
-    console.error("Error en getUbicacionByParams:", err);
-
-    return res.status(500).json({
-      message: err.message || "Error al buscar la ubicación",
-    });
+    return res.status(500).json({ message: err.message, type: "Error" });
   }
 };
 

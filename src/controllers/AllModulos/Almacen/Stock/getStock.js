@@ -37,43 +37,37 @@ const getStockAlmacen = async (req, res) => {
       StockAlmacen.find(query)
         .populate("contratoId", "cliente") // Traemos solo lo necesario
         .populate("sedeId", "nombre")
-        .populate("movimientoId") // Aquí vienen los bienes
+        .populate("movimientoId", "numeroDeActa correlativa descripcionBienes datosGenerales") // Aquí vienen los bienes
         .populate("creadoPor", "name lastname")
+        .populate("historial.actualizadoPor", "name lastname") // Para mostrar quién hizo cada actualización en el historial
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(lim)
         .lean(),
       StockAlmacen.countDocuments(query),
     ]);
-
+    console.log("RAW STOCK DATA:", JSON.stringify(raw_data, null, 2)); // Log para verificar la estructura de los datos
     // MAPEO DE DATOS RELEVANTES
     const data = raw_data.map(stock => {
-      // Buscamos el bien específico dentro del array del movimiento
       const bienData = stock.movimientoId?.descripcionBienes?.find(
         (b) => b._id.toString() === stock.bienId.toString()
       );
 
       return {
         _id: stock._id,
-        correlativa: stock.movimientoId?.correlativa,
-        cantidadDisponible: stock.cantidadDisponible,
+        correlativaActa: stock.movimientoId?.correlativa,
         numeroDeActa: stock.movimientoId?.numeroDeActa,
-        cantidadTotal: stock.cantidadTotal,
+        contrato: stock.contratoId?.cliente || "N/A",
         descripcion: stock.descripcion,
-        contrato: stock.contratoId?.cliente,
-        fechaIngreso: stock.movimientoId?.datosGenerales?.fecha,
-        creadoPor: `${stock.creadoPor?.name} ${stock.creadoPor?.lastname}`,
-        estado: stock.estado,
-        historial: stock.historial,
-        // Datos extraídos del subdocumento del bien
-        detallesBien: {
-          descripcion: bienData?.descripcion || stock.descripcion,
-          unidad: bienData?.unidadDeMedida,
-          pesoNeto: bienData?.pesoNeto,
-          pesoBruto: bienData?.pesoBruto,
-          estadoEnvase: bienData?.estadoEnvase,
-          subItem: bienData?.subItem
-        }
+        cantidadDisponible: stock.cantidadDisponible,
+        cantidadTotal: stock.cantidadTotal,
+        historial: stock.historial || [],
+        sede: stock.sedeId?.nombre || "N/A",
+        creadoPorNombre: stock.creadoPor ? `${stock.creadoPor.name} ${stock.creadoPor.lastname}` : "N/A",
+        unidadDeMedida: bienData?.unidadDeMedida || "UNIDAD",
+        bienData: bienData || null, // Agregamos el bienData completo para mayor contexto
+        fechaIngreso: stock.movimientoId?.datosGenerales.fecha,
+        estado: stock.estado
       };
     });
 
