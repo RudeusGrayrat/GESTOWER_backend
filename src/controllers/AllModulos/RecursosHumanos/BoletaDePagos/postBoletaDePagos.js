@@ -16,10 +16,13 @@ const postBoletaDePagos = async (req, res) => {
   try {
     const [month, year] = fechaBoletaDePago.split("/");
     const fechaOperacionDate = new Date(`${year}/${month}`);
-
+    const idColaborador = colaborador._id;
+    if (!idColaborador) {
+      return res.status(400).json({ message: "Colaborador es requerido" });
+    }
     const boletaFound = await BoletaDePagos.findOne({
       fechaBoletaDePago,
-      colaborador,
+      colaborador: idColaborador,
     });
 
     if (boletaFound) {
@@ -48,7 +51,7 @@ const postBoletaDePagos = async (req, res) => {
     const boleta = new BoletaDePagos({
       correlativa,
       fechaBoletaDePago,
-      colaborador: colaborador._id,
+      colaborador: idColaborador,
       empresaColaborador: colaborador.business,
       fechaIngresoColaborador: colaborador?.dateStart,
       diasTrabajados,
