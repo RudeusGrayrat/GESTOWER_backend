@@ -62,6 +62,7 @@ const postBoletaDePagos = async (req, res) => {
     await boleta.save();
     return res.status(201).json({ message: "Boleta de pagos creada" });
   } catch (error) {
+    console.error("Error al crear Boleta de pagos:", error);
     return res.status(500).json({ message: error.message });
   }
 };
