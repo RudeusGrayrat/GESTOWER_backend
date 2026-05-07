@@ -22,6 +22,8 @@ const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
 const convertPathToPdf = require("../../../../utils/convertToPdf");
+const convertDocx = require("../../../../utils/convertDocx");
+const path = require("path");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -34,59 +36,53 @@ const enviarBoleta = async (req, res) => {
       return res.status(400).json({ message: "Faltan datos para procesar." });
     }
 
-    const newData = datosBoleta.map(async (data) => {
-      // const newUrl = await convertPathToPdf(data.archivoUrl);
-      return {
-        ...data,
-        archivoUrl: data.archivoUrl,
-      };
-    });
-    const datosBoletaDePago = await Promise.all(newData);
+    const datosBoletaDePago = await Promise.all(datosBoleta);
 
     // Responder inmediatamente al cliente
     res.status(200).json({
       message: "El proceso de envío de correos ha comenzado.",
     });
-
+    const rootPath = process.cwd();
+    let NOMBRE_PLANTILLA = "BOLETA_TOWER_DOCX.docx";
     let EMAIL_USER;
     let EMAIL_PASS;
     let SMTP;
     let PORT = 465;
     // Configurar transporte de nodemailer
-    switch (business) {
-      case "LADIAMB S.A.C":
-        EMAIL_USER = EMAIL_LADIAMB;
-        EMAIL_PASS = PASS_LADIAMB;
-        SMTP = SMTP_LADIAMB;
-        break;
-      case "CORPEMSE S.A.C":
-        EMAIL_USER = EMAIL_CORPEMSE;
-        EMAIL_PASS = PASS_CORPEMSE;
-        SMTP = SMTP_CORPEMSE;
-        break;
-      case "TOWER AND TOWER S.A":
-        EMAIL_USER = EMAIL_TOWERANDTOWER;
-        EMAIL_PASS = PASS_TOWERANDTOWER;
-        SMTP = SMTP_TOWERANDTOWER;
-        PORT = 587;
-        break;
-      case "ECOLOGY SCRL":
-        EMAIL_USER = EMAIL_ECOLOGY;
-        EMAIL_PASS = PASS_ECOLOGY;
-        SMTP = SMTP_ECOLOGY;
-        break;
-      case "INVERSIONES LURIN S.A.C":
-        EMAIL_USER = EMAIL_INVERSIONESLURIN;
-        EMAIL_PASS = PASS_INVERSIONESLURIN;
-        SMTP = SMTP_INVERSIONESLURIN;
-        break;
-      default:
-        EMAIL_USER = EMAIL_TOWERANDTOWER;
-        EMAIL_PASS = PASS_TOWERANDTOWER;
-        SMTP = SMTP_TOWERANDTOWER;
-        PORT = 587;
-        break;
+    if (business?.includes("LABORADORIO") || business?.includes("LADIAMB")) {
+      EMAIL_USER = EMAIL_LADIAMB;
+      EMAIL_PASS = PASS_LADIAMB;
+      SMTP = SMTP_LADIAMB;
+      NOMBRE_PLANTILLA = "BOLETA_LADIAMB_DOCX.docx";
+    } else if (business?.includes("CORPEMSE")) {
+      EMAIL_USER = EMAIL_CORPEMSE;
+      EMAIL_PASS = PASS_CORPEMSE;
+      SMTP = SMTP_CORPEMSE;
+      NOMBRE_PLANTILLA = "BOLETA_CORPEMSE_DOCX.docx";
+    } else if (business?.includes("TOWER AND TOWER")) {
+      EMAIL_USER = EMAIL_TOWERANDTOWER;
+      EMAIL_PASS = PASS_TOWERANDTOWER;
+      SMTP = SMTP_TOWERANDTOWER;
+      PORT = 587;
+      NOMBRE_PLANTILLA = "BOLETA_TOWER_DOCX.docx";
+    } else if (business?.includes("ECOLOGY")) {
+      EMAIL_USER = EMAIL_ECOLOGY;
+      EMAIL_PASS = PASS_ECOLOGY;
+      SMTP = SMTP_ECOLOGY;
+      NOMBRE_PLANTILLA = "BOLETA_ECOLOGY_DOCX.docx";
+    } else if (business?.includes("INVERSIONES LURIN")) {
+      EMAIL_USER = EMAIL_INVERSIONESLURIN;
+      EMAIL_PASS = PASS_INVERSIONESLURIN;
+      SMTP = SMTP_INVERSIONESLURIN;
+      NOMBRE_PLANTILLA = "BOLETA_INVERSIONES_LURIN_DOCX.docx";
+    } else {
+      EMAIL_USER = EMAIL_TOWERANDTOWER;
+      EMAIL_PASS = PASS_TOWERANDTOWER;
+      SMTP = SMTP_TOWERANDTOWER;
+      PORT = 587;
+      NOMBRE_PLANTILLA = "BOLETA_TOWER_DOCX.docx";
     }
+    const templatePath = path.join(rootPath, "templates", NOMBRE_PLANTILLA);
 
     const transporter = nodemailer.createTransport({
       host: SMTP,
@@ -98,32 +94,31 @@ const enviarBoleta = async (req, res) => {
       },
       connectionTimeout: 5000, // 5 segundos
       sendTimeout: 10000, // 10 segundos
-      ...(business === "TOWER AND TOWER" && {
+      ...(business?.includes("TOWER AND TOWER") && {
         tls: { rejectUnauthorized: false },
       }),
     });
-
     const errores = [];
     const { default: PQueue } = await import("p-queue");
     const queue = new PQueue({ concurrency: 3 }); // Instanciar PQueue con 'new'
     // Iterar sobre cada boleta y agregar la tarea a la cola
     for (const {
+      dataDocx,
       email,
       colaborador,
       empresa,
       fechaBoletaDePago,
       boletaId,
-      archivoUrl,
     } of datosBoletaDePago) {
       queue.add(async () => {
         try {
           if (
+            !dataDocx ||
             !email ||
             !colaborador ||
             !empresa ||
             !fechaBoletaDePago ||
-            !boletaId ||
-            !archivoUrl
+            !boletaId
           ) {
             errores.push({ email, error: "Faltan datos." });
             return;
@@ -133,8 +128,10 @@ const enviarBoleta = async (req, res) => {
           if (!findBoleta) {
             throw new Error("Boleta no encontrada");
           }
+          const wordBuffer = await convertDocx(dataDocx, templatePath);
 
-          const pdf = await convertPathToPdf(archivoUrl);
+          const pdfBuffer = await convertToPdf(wordBuffer);
+
           const mailOptions = {
             from: `Boleta de Pago <${EMAIL_USER}>`,
             to: email,
@@ -143,7 +140,7 @@ const enviarBoleta = async (req, res) => {
             attachments: [
               {
                 filename: "Boleta de Pago.pdf",
-                content: pdf,
+                content: pdfBuffer,
                 encoding: "base64",
               },
             ],
@@ -211,9 +208,9 @@ const enviarBoleta = async (req, res) => {
           };
 
           await transporter.sendMail(mailOptions);
-          findBoleta.envio = dayjs()
-            .tz("America/Lima")
-            .format("DD/MM/YYYY hh:mm A");
+          // findBoleta.envio = dayjs()
+          //   .tz("America/Lima")
+          //   .format("DD/MM/YYYY hh:mm A");
           await findBoleta.save();
         } catch (error) {
           errores.push({ email, error: error.message });
