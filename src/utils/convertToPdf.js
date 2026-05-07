@@ -30,12 +30,13 @@ const convertToPdf = async (wordBuffer) => {
     if (fs.existsSync(tempDocx)) fs.unlinkSync(tempDocx);
     if (fs.existsSync(tempPdf)) fs.unlinkSync(tempPdf);
 
+    console.timeEnd("⏱️ Tiempo convertPDF");
     return pdfBuffer;
 
   } catch (error) {
     if (console.timeEnd) console.timeEnd("🚀 Unoserver-Direct-CLI");
     console.error("❌ Error en unoconvert CLI:", error.message);
-    console.time("⏱️ Tiempo convertDocx");
+    console.timeEnd("⏱️ Tiempo convertPDF");
 
     // Limpiar aunque falle
     if (fs.existsSync(tempDocx)) fs.unlinkSync(tempDocx);
