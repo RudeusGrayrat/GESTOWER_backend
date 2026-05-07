@@ -49,7 +49,7 @@ const enviarBoleta = async (req, res) => {
     let SMTP;
     let PORT = 465;
     // Configurar transporte de nodemailer
-    if (business?.includes("LABORADORIO") || business?.includes("LADIAMB")) {
+    if (business?.includes("LABORATORIO") || business?.includes("LADIAMB")) {
       EMAIL_USER = EMAIL_LADIAMB;
       EMAIL_PASS = PASS_LADIAMB;
       SMTP = SMTP_LADIAMB;
