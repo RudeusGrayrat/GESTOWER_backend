@@ -83,7 +83,8 @@ const enviarBoleta = async (req, res) => {
       NOMBRE_PLANTILLA = "BOLETA_TOWER_DOCX.docx";
     }
     const templatePath = path.join(rootPath, "templates", NOMBRE_PLANTILLA);
-
+    console.log("EMPRESA:", business);
+    console.log("NOMBRE PLANTILLA:", NOMBRE_PLANTILLA);
     const transporter = nodemailer.createTransport({
       host: SMTP,
       port: PORT,
