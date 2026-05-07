@@ -21,26 +21,26 @@ const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago")
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
-const convertPathToPdf = require("../../../../utils/convertToPdf");
 const convertDocx = require("../../../../utils/convertDocx");
 const path = require("path");
+const convertToPdf = require("../../../../utils/convertToPdf");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const enviarBoleta = async (req, res) => {
   const { datosBoleta, business } = req.body;
-
+  console.log("Datos recibidos para enviar boletas:", { datosBoleta, business });
   try {
     if (!datosBoleta || datosBoleta.length === 0) {
-      return res.status(400).json({ message: "Faltan datos para procesar." });
+      return res.status(400).json({ message: "Faltan datos para procesar.", type: "Error" });
     }
 
     const datosBoletaDePago = await Promise.all(datosBoleta);
 
     // Responder inmediatamente al cliente
     res.status(200).json({
-      message: "El proceso de envío de correos ha comenzado.",
+      message: "El proceso de envío de correos ha comenzado.", type: "Correcto"
     });
     const rootPath = process.cwd();
     let NOMBRE_PLANTILLA = "BOLETA_TOWER_DOCX.docx";
@@ -129,8 +129,13 @@ const enviarBoleta = async (req, res) => {
             throw new Error("Boleta no encontrada");
           }
           const wordBuffer = await convertDocx(dataDocx, templatePath);
-
+          if (!wordBuffer) {
+            throw new Error("Error al generar el documento Word");
+          }
           const pdfBuffer = await convertToPdf(wordBuffer);
+          if (!pdfBuffer) {
+            throw new Error("Error al convertir a PDF");
+          }
 
           const mailOptions = {
             from: `Boleta de Pago <${EMAIL_USER}>`,

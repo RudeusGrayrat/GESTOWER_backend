@@ -6,6 +6,7 @@ const execAsync = promisify(exec);
 
 const convertToPdf = async (wordBuffer) => {
   console.time("🚀 Unoserver-Direct-CLI");
+  console.time("⏱️ Tiempo convertPDF");
 
   // Creamos rutas temporales únicas para no chocar entre peticiones
   const tempId = Date.now();
@@ -34,6 +35,7 @@ const convertToPdf = async (wordBuffer) => {
   } catch (error) {
     if (console.timeEnd) console.timeEnd("🚀 Unoserver-Direct-CLI");
     console.error("❌ Error en unoconvert CLI:", error.message);
+    console.time("⏱️ Tiempo convertDocx");
 
     // Limpiar aunque falle
     if (fs.existsSync(tempDocx)) fs.unlinkSync(tempDocx);
