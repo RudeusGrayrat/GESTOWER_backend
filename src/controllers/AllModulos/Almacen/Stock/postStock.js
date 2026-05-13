@@ -6,6 +6,8 @@ const postStockAlmacen = async (req, res) => {
     sedeId,
     contratoId,
     item,
+    pesoNeto,
+    pesoBruto,
     descripcion,
     unidadDeMedida,
     subItem,
@@ -21,6 +23,8 @@ const postStockAlmacen = async (req, res) => {
       !sedeId ||
       !contratoId ||
       !item ||
+      !pesoNeto ||
+      !pesoBruto ||
       !descripcion ||
       !unidadDeMedida ||
       cantidadTotal === undefined ||
@@ -49,6 +53,8 @@ const postStockAlmacen = async (req, res) => {
       sedeId,
       contratoId,
       item,
+      pesoNeto,
+      pesoBruto,
       descripcion,
       unidadDeMedida,
       subItem,

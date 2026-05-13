@@ -78,6 +78,10 @@ const movimientoSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Employee",
     },
+    aprobadoPor: {
+      type: Schema.Types.ObjectId,
+      ref: "Employee",
+    },
     rechazadoPor: {
       type: Schema.Types.ObjectId,
       ref: "Employee",

@@ -13,6 +13,10 @@ const stockSchema = new Schema(
       type: Schema.Types.ObjectId,
       required: true,
     },
+    item: Number,
+    pesoNeto: String,
+    pesoBruto: String,
+    unidadDeMedida: String,
 
     descripcion: {
       type: String,
@@ -32,6 +36,7 @@ const stockSchema = new Schema(
       type: [
         {
           fecha: { type: Date, default: Date.now },
+          accion: String,
           cantidadIngresada: Number,
           cantidadDisponible: Number,
           ubicacion: String,
@@ -67,8 +72,17 @@ const stockSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Employee",
     },
+    ubicado: { type: Boolean, default: false },
+    ubicaciones: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Ubicacion",
+      },
+    ]
   },
   { timestamps: true }
 );
-
+stockSchema.index({ contratoId: 1 });
+stockSchema.index({ ubicado: 1 });
+stockSchema.index({ bienId: 1 });
 module.exports = mongoose.model("Stock", stockSchema);

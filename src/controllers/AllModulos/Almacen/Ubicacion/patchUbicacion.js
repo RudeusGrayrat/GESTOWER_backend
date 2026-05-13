@@ -6,16 +6,14 @@ const patchUbicacion = async (req, res) => {
 
   try {
     const ubicacion = await Ubicacion.findById(_id);
-    if (!ubicacion) return res.status(404).json({ message: "Ubicación no encontrada" });
+    if (!ubicacion) return res.status(404).json({ message: "Ubicación no encontrada", type: "Error" });
 
     if (bienes) {
-      // 1. Mapeamos lo anterior usando stockId
       const stockAnteriorMap = {};
       ubicacion.bienes.forEach((b) => {
         stockAnteriorMap[b.stockId?.toString()] = b.cantidadIngresada;
       });
 
-      // 2. Mapeamos lo nuevo
       const stockNuevoMap = {};
       bienes.forEach((b) => {
         stockNuevoMap[b.stockId?.toString()] = b.cantidadIngresada;
@@ -24,75 +22,80 @@ const patchUbicacion = async (req, res) => {
       const todosLosIds = new Set([...Object.keys(stockAnteriorMap), ...Object.keys(stockNuevoMap)]);
 
       for (const stockId of todosLosIds) {
-
-
-        // ... dentro del bucle for (const stockId of todosLosIds) ...
         const cantAnterior = Number(stockAnteriorMap[stockId] || 0);
         const cantNueva = Number(stockNuevoMap[stockId] || 0);
-
-        // Si cantNueva es 0 porque ya no viene en el body, 
-        // diferencia será (0 - cantAnterior) = negativo.
-        // El sistema interpretará que se están quitando todos y los devolverá al disponible.
         const diferencia = cantNueva - cantAnterior;
 
         if (diferencia !== 0) {
           const stockDoc = await Stock.findById(stockId);
-
           if (stockDoc) {
-            // Validamos stock insuficiente solo si estamos agregando (diferencia > 0)
+            // Validar stock disponible si se intenta asignar más
             if (diferencia > 0 && stockDoc.cantidadDisponible < diferencia) {
               return res.status(400).json({
-                message: `Stock insuficiente para ${stockDoc.descripcion}. Disponible: ${stockDoc.cantidadDisponible}`
+                message: `Stock insuficiente para ${stockDoc.descripcion}. Disponible: ${stockDoc.cantidadDisponible}`,
+                type: "Error"
               });
             }
 
-            // A. ACTUALIZAMOS SALDO (Si diferencia es negativa, -= neg se vuelve suma +=)
+            // 1. Actualizar saldos
             stockDoc.cantidadDisponible -= diferencia;
 
-            // B. DETERMINAMOS TIPO DE ACCIÓN PARA EL HISTORIAL
-            let tipoAccion = "";
-            if (cantAnterior > 0 && cantNueva === 0) {
-              tipoAccion = "Eliminación/Retiro Total";
+            // 2. Sincronizar array de ubicaciones en el Stock
+            if (cantNueva > 0) {
+              if (!stockDoc.ubicaciones.includes(ubicacion._id)) {
+                stockDoc.ubicaciones.push(ubicacion._id);
+              }
             } else {
-              tipoAccion = diferencia > 0 ? 'Asignación' : 'Ajuste/Retiro';
+              // Si la cantidad llega a 0 en esta ubicación, se remueve la referencia
+              stockDoc.ubicaciones = stockDoc.ubicaciones.filter(
+                id => id.toString() !== ubicacion._id.toString()
+              );
             }
 
-            const detalleUbicacion = `${ubicacion.rack} - Nivel ${ubicacion.nivel} - Seccion ${ubicacion.seccion}`;
+            // 3. Actualizar estado "ubicado"
+            stockDoc.ubicado = stockDoc.ubicaciones.length > 0;
 
-            stockDoc.historial.push({
+            // 4. Lógica de tipoAccion (Aprovechando el nuevo campo del modelo)
+            let tipoAccion = "";
+            if (cantAnterior === 0 && cantNueva > 0) {
+              tipoAccion = "ASIGNACION"; // Primera vez que entra a esta ubicación
+            } else if (cantAnterior > 0 && cantNueva === 0) {
+              tipoAccion = "RETIRO_TOTAL"; // Se vació este rack para este producto
+            } else if (diferencia > 0) {
+              tipoAccion = "REUBICACION_INCREMENTO"; // Se trajo más de otro lado o del disponible
+            } else {
+              tipoAccion = "REUBICACION_DEVOLUCION"; // Se quitó un poco para moverlo a otro lado
+            }
+
+            stockDoc.historial.unshift({
               fecha: new Date(),
-              cantidadIngresada: diferencia,
-              cantidadDisponible: stockDoc.cantidadDisponible,
-              ubicacion: `${detalleUbicacion} (${tipoAccion})`,
-              actualizadoPor: actualizadoPor
+              cantidadIngresada: diferencia, // Valor relativo (+ o -)
+              cantidadDisponible: stockDoc.cantidadDisponible, // Saldo tras la operación
+              ubicacion: `${ubicacion.rack}-${ubicacion.nivel}-${ubicacion.seccion}`,
+              accion: tipoAccion, // <--- Nuevo campo aprovechado
+              actualizadoPor
             });
 
             await stockDoc.save();
           }
         }
       }
-      // Actualizamos el array de bienes con el nuevo stockId y cantidadIngresada
       ubicacion.bienes = bienes;
     }
 
-    // Lógica de estados
+    // Lógica de estado de la ubicación física
     if (porcentaje !== undefined) ubicacion.porcentaje = porcentaje;
-
-    if (ubicacion.bienes.length === 0 && (ubicacion.porcentaje === 0)) {
-      ubicacion.estado = "LIBRE";
-    } else {
-      ubicacion.estado = estado || (ubicacion.porcentaje >= 100 ? "OCUPADO" : "PARCIALMENTE OCUPADO");
-    }
+    ubicacion.estado = (ubicacion.bienes.length === 0 && ubicacion.porcentaje === 0)
+      ? "LIBRE"
+      : (estado || (ubicacion.porcentaje >= 100 ? "OCUPADO" : "PARCIALMENTE OCUPADO"));
 
     if (observaciones) ubicacion.observaciones = observaciones;
     if (actualizadoPor) ubicacion.actualizadoPor = actualizadoPor;
 
     await ubicacion.save();
-    return res.status(200).json({ message: "Ubicación y Stock sincronizados", ubicacion });
-
+    return res.status(200).json({ message: "Sincronización de stock y ubicación completa", ubicacion, type: "Correcto" });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message, type: "Error" });
   }
 };
-
 module.exports = patchUbicacion;

@@ -20,7 +20,6 @@ const ubicacionSchema = new Schema(
           type: String,
           required: true,
         },
-
         cantidadIngresada: {
           type: Number,
           required: true,

@@ -47,6 +47,7 @@ const getAllMovimientosBySede = async (req, res) => {
         .populate("contratoId")
         .populate("sedeId")
         .populate("creadoPor", "name lastname email")
+        .populate("aprobadoPor", "name lastname email")
         .lean(),
       Movimiento.countDocuments(query),
     ]);

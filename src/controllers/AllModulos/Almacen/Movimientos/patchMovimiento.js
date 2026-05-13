@@ -1,52 +1,105 @@
+const dayjs = require("dayjs");
 const Movimiento = require("../../../../models/AllModulos/Almacen/Movimiento");
 const StockAlmacen = require("../../../../models/AllModulos/Almacen/Stock");
 const Ubicacion = require("../../../../models/AllModulos/Almacen/Ubicacion");
-const { uploadImage, deleteImage, extractPublicId, cleanBase64 } = require("../../../../utils/cloudinary/images");
+const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
+
+const cleanBase64 = (str) => (str?.includes(",") ? str.split(",")[1] : str);
 
 const patchMovimiento = async (req, res) => {
-  const { _id, actualizadoPor, aprobadoPor, rechazadoPor, estado, referenciaImagen, ...otrosCampos } = req.body;
+  const {
+    _id,
+    correlativa,
+    actualizadoPor,
+    aprobadoPor,
+    rechazadoPor,
+    estado,
+    referenciaImagen,
+    // Campos editables del modelo:
+    movimiento,
+    codigoIngreso,
+    numeroDeActa,
+    contribuyente,
+    numeroDocumento,
+    datosGenerales,
+    descripcionBienes,
+    detallesDePeso,
+    observaciones,
+    horaSalida,
+    fechaSalida,
+    contratoId,
+  } = req.body;
   const uploadedPublicIds = [];
-
+  console.log("Uploaded Public IDs array initialized:", uploadedPublicIds);
   try {
     if (!actualizadoPor || !_id) {
       return res.status(400).json({ message: "Faltan datos requeridos", type: "Error" });
     }
 
     const movPrevio = await Movimiento.findById(_id);
-    if (!movPrevio) return res.status(404).json({ message: "Movimiento no encontrado", type: "Error" });
+    if (!movPrevio) {
+      return res.status(404).json({ message: "Movimiento no encontrado", type: "Error" });
+    }
 
-    // --- BLOQUEO DE SEGURIDAD ---
-    // Si ya fue aprobado o rechazado, no permitimos más cambios (Inamovilidad PNP/SUNAT)
     if (movPrevio.estado === "APROBADO" || movPrevio.estado === "RECHAZADO") {
       return res.status(403).json({ message: "El registro ya está cerrado", type: "Error" });
     }
 
     // --- GESTIÓN DE IMAGEN ---
-    let urlImagen = movPrevio.referenciaImagen;
-    const esBase64 = referenciaImagen && referenciaImagen.includes("base64");
-    const quiereEliminar = !referenciaImagen || referenciaImagen === "";
+    // Usamos la misma lógica que el POST: startsWith("data:image")
+    if (referenciaImagen !== undefined) {
+      console.log("Referencia Imagen recibida:");
+      const esBase64Nueva = referenciaImagen && referenciaImagen.startsWith("data:image");
+      const quiereEliminar = referenciaImagen === "" || referenciaImagen === null;
+      console.log("Es base64 nueva?", esBase64Nueva);
+      console.log("Quiere eliminar imagen?", quiereEliminar);
 
-    if (esBase64) {
-      if (movPrevio.referenciaImagen?.startsWith("http")) {
-        const oldId = extractPublicId(movPrevio.referenciaImagen);
-        if (oldId) await deleteImage(oldId);
+      if (esBase64Nueva) {
+        // Borrar imagen anterior si existe
+        if (movPrevio.referenciaImagen?.startsWith("http")) {
+          const oldId = extractPublicId(movPrevio.referenciaImagen);
+          if (oldId) await deleteImage(oldId);
+        }
+        // Subir nueva imagen
+        const fileBuffer = Buffer.from(cleanBase64(referenciaImagen), "base64");
+        const fileName = `mov_${correlativa || _id}_${dayjs().format("YYYY-MM-DD")}`;
+        const result = await uploadImage(fileBuffer, fileName);
+        console.log("Image uploaded to Cloudinary:", result);
+        movPrevio.referenciaImagen = result.secure_url;
+        uploadedPublicIds.push(extractPublicId(result.secure_url));
+      } else if (quiereEliminar) {
+        if (movPrevio.referenciaImagen?.startsWith("http")) {
+          const oldId = extractPublicId(movPrevio.referenciaImagen);
+          if (oldId) await deleteImage(oldId);
+        }
+        movPrevio.referenciaImagen = "";
       }
-      const result = await uploadImage(Buffer.from(cleanBase64(referenciaImagen), "base64"), `mov_${_id}_${Date.now()}`);
-      urlImagen = result.secure_url;
-      uploadedPublicIds.push(extractPublicId(urlImagen));
-    } else if (quiereEliminar && movPrevio.referenciaImagen) {
-      // Si el front manda null/vacío, borramos de Cloudinary y seteamos ""
-      if (movPrevio.referenciaImagen.startsWith("http")) {
-        const oldId = extractPublicId(movPrevio.referenciaImagen);
-        if (oldId) await deleteImage(oldId);
-      }
-      urlImagen = "";
+      // Si viene una URL de Cloudinary existente (sin cambios), no hacemos nada
     }
 
-    // --- ACTUALIZACIÓN DE DATOS ---
-    // otrosCampos puede incluir 'estadoActa' si el front lo manda, pero aquí no influye en el stock
-    Object.assign(movPrevio, otrosCampos);
-    movPrevio.referenciaImagen = urlImagen;
+    // --- CAMPOS SIMPLES (solo si vienen en el body) ---
+    if (movimiento !== undefined) movPrevio.movimiento = movimiento;
+    if (codigoIngreso !== undefined) movPrevio.codigoIngreso = codigoIngreso;
+    if (numeroDeActa !== undefined) movPrevio.numeroDeActa = numeroDeActa;
+    if (contribuyente !== undefined) movPrevio.contribuyente = contribuyente;
+    if (numeroDocumento !== undefined) movPrevio.numeroDocumento = numeroDocumento;
+    if (detallesDePeso !== undefined) movPrevio.detallesDePeso = detallesDePeso;
+    if (observaciones !== undefined) movPrevio.observaciones = observaciones;
+    if (horaSalida !== undefined) movPrevio.horaSalida = horaSalida;
+    if (fechaSalida !== undefined) movPrevio.fechaSalida = fechaSalida;
+    if (contratoId !== undefined) movPrevio.contratoId = contratoId;
+
+    // --- SUBDOCUMENTO datosGenerales (merge profundo, no reemplazo) ---
+    if (datosGenerales !== undefined) {
+      Object.assign(movPrevio.datosGenerales, datosGenerales);
+    }
+
+    // --- ARRAY descripcionBienes (reemplazo completo) ---
+    if (descripcionBienes !== undefined) {
+      movPrevio.descripcionBienes = descripcionBienes;
+    }
+
+    // --- AUDITORÍA Y ESTADO ---
     movPrevio.actualizadoPor = actualizadoPor;
 
     if (estado) {
@@ -57,13 +110,17 @@ const patchMovimiento = async (req, res) => {
 
     const movActualizado = await movPrevio.save();
 
-    // --- LÓGICA DE STOCK (Única fuente de verdad: campo 'estado') ---
+    // --- LÓGICA DE STOCK ---
     if (estado === "APROBADO") {
       if (movActualizado.movimiento === "INGRESO") {
         const stocks = movActualizado.descripcionBienes.map((bien) => ({
           movimientoId: movActualizado._id,
           bienId: bien._id,
+          item: bien.item,
           descripcion: bien.descripcion,
+          pesoNeto: bien.pesoNeto,
+          pesoBruto: bien.pesoBruto,
+          unidadDeMedida: bien.unidadDeMedida,
           cantidadTotal: bien.cantidadIngresada,
           cantidadDisponible: bien.cantidadIngresada,
           sedeId: movActualizado.sedeId,
@@ -76,14 +133,35 @@ const patchMovimiento = async (req, res) => {
       if (movActualizado.movimiento === "SALIDA") {
         for (const bien of movActualizado.descripcionBienes) {
           const idABuscar = bien.bienIdOriginal || bien._id;
-          await StockAlmacen.findOneAndUpdate(
-            { bienId: idABuscar },
-            { cantidadTotal: 0, cantidadDisponible: 0 }
-          );
-          await Ubicacion.updateMany(
-            { "bienes.bienId": idABuscar },
-            { $pull: { bienes: { bienId: idABuscar } } }
-          );
+          const stock = await StockAlmacen.findOne({ bienId: idABuscar });
+
+          if (stock) {
+            await Ubicacion.updateMany(
+              { _id: { $in: stock.ubicaciones } },
+              { $pull: { bienes: { stockId: stock._id } } }
+            );
+            await Ubicacion.updateMany(
+              { _id: { $in: stock.ubicaciones }, bienes: { $size: 0 } },
+              { $set: { estado: "LIBRE", porcentaje: 0 } }
+            );
+
+            stock.cantidadTotal -= bien.cantidadIngresada;
+            stock.cantidadDisponible -= bien.cantidadIngresada;
+            if (bien.pesoNeto) stock.pesoNeto = bien.pesoNeto;
+            if (bien.pesoBruto) stock.pesoBruto = bien.pesoBruto;
+
+            if (stock.cantidadTotal <= 0) {
+              stock.cantidadTotal = 0;
+              stock.cantidadDisponible = 0;
+              stock.estado = "AGOTADO";
+            } else {
+              stock.estado = "PARCIAL";
+            }
+
+            stock.ubicado = false;
+            stock.ubicaciones = [];
+            await stock.save();
+          }
         }
       }
     }
@@ -95,7 +173,10 @@ const patchMovimiento = async (req, res) => {
     });
 
   } catch (error) {
-    if (uploadedPublicIds.length > 0) await Promise.allSettled(uploadedPublicIds.map(id => deleteImage(id)));
+    // Rollback de imágenes subidas si algo falló
+    if (uploadedPublicIds.length > 0) {
+      await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));
+    }
     console.error(error);
     return res.status(500).json({ message: error.message, type: "Error" });
   }

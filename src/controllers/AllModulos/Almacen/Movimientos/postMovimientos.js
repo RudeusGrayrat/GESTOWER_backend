@@ -1,6 +1,7 @@
 const Movimiento = require("../../../../models/AllModulos/Almacen/Movimiento");
 const generarCorrelativa = require("./correlativa");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
+const dayjs = require("dayjs");
 
 const cleanBase64 = (str) => str?.includes(",") ? str.split(",")[1] : str;
 
@@ -18,7 +19,7 @@ const createMovimiento = async (req, res) => {
     let imagenUrl = body.referenciaImagen;
     if (body.referenciaImagen && body.referenciaImagen.startsWith("data:image")) {
       const fileBuffer = Buffer.from(cleanBase64(body.referenciaImagen), "base64");
-      const fileName = `movimiento_${body.movimiento}_${Date.now()}`;
+      const fileName = `mov_${body.correlativa}_${dayjs().format("YYYY-MM-DD")}`;
       const result = await uploadImage(fileBuffer, fileName);
 
       imagenUrl = result.secure_url;
