@@ -39,6 +39,7 @@ const stockSchema = new Schema(
           accion: String,
           cantidadIngresada: Number,
           cantidadDisponible: Number,
+          cantidadTotal: Number,
           ubicacion: String,
           actualizadoPor: { type: Schema.Types.ObjectId, ref: "Employee" },
         },

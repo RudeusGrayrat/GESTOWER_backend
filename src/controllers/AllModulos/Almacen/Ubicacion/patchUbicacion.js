@@ -71,6 +71,7 @@ const patchUbicacion = async (req, res) => {
               fecha: new Date(),
               cantidadIngresada: diferencia, // Valor relativo (+ o -)
               cantidadDisponible: stockDoc.cantidadDisponible, // Saldo tras la operación
+              cantidadTotal: stockDoc.cantidadTotal,
               ubicacion: `${ubicacion.rack}-${ubicacion.nivel}-${ubicacion.seccion}`,
               accion: tipoAccion, // <--- Nuevo campo aprovechado
               actualizadoPor

@@ -102,6 +102,7 @@ const recursosHumanosRouter = require("./Modulos/RecursosHumanos");
 const herramientasRouter = require("./Modulos/Herramientas");
 const certificacionesRouter = require("./Modulos/Certificacion");
 const postAsistenciaApp = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/postAsistenciaApp");
+const almacenLurinRouter = require("./Modulos/Almcen");
 
 const router = Router();
 
@@ -209,6 +210,7 @@ router.get("/employee/:id", getEmployeeById);
 router.get("/ruc", consulApi);
 
 router.use("/sistemas", sistemasRouter);
+router.use("/almacenLurin", almacenLurinRouter);
 router.use("/rrhh", recursosHumanosRouter);
 router.use("/herramientas", herramientasRouter);
 router.use("/certificaciones", certificacionesRouter);

@@ -104,8 +104,21 @@ const patchMovimiento = async (req, res) => {
 
     if (estado) {
       movPrevio.estado = estado;
-      if (estado === "APROBADO") movPrevio.aprobadoPor = aprobadoPor;
-      if (estado === "RECHAZADO") movPrevio.rechazadoPor = rechazadoPor;
+      if (estado === "APROBADO") {
+        if (movimiento === "SALIDA" || movPrevio.movimiento === "SALIDA") {
+          const findMovimientoIngreso = await Movimiento.findOne({
+            correlativa: codigoIngreso || movPrevio.codigoIngreso,
+            estado: "APROBADO",
+          });
+          if (!findMovimientoIngreso) {
+            return res.status(404).json({ message: "Este movimiento de ingreso no está aprobado o no existe", type: "Error" });
+          }
+        }
+        movPrevio.aprobadoPor = aprobadoPor;
+      }
+      if (estado === "RECHAZADO") {
+        movPrevio.rechazadoPor = rechazadoPor
+      };
     }
 
     const movActualizado = await movPrevio.save();
@@ -126,6 +139,16 @@ const patchMovimiento = async (req, res) => {
           sedeId: movActualizado.sedeId,
           contratoId: movActualizado.contratoId,
           creadoPor: aprobadoPor,
+          historial: [
+            {
+              fecha: new Date(),
+              accion: "INGRESO",
+              cantidadIngresada: bien.cantidadIngresada,
+              cantidadDisponible: bien.cantidadIngresada,
+              cantidadTotal: bien.cantidadIngresada,
+              actualizadoPor: aprobadoPor,
+            },
+          ],
         }));
         await StockAlmacen.insertMany(stocks);
       }
@@ -135,36 +158,80 @@ const patchMovimiento = async (req, res) => {
           const idABuscar = bien.bienIdOriginal || bien._id;
           const stock = await StockAlmacen.findOne({ bienId: idABuscar });
 
-          if (stock) {
-            await Ubicacion.updateMany(
-              { _id: { $in: stock.ubicaciones } },
-              { $pull: { bienes: { stockId: stock._id } } }
-            );
-            await Ubicacion.updateMany(
-              { _id: { $in: stock.ubicaciones }, bienes: { $size: 0 } },
-              { $set: { estado: "LIBRE", porcentaje: 0 } }
-            );
-
-            stock.cantidadTotal -= bien.cantidadIngresada;
-            stock.cantidadDisponible -= bien.cantidadIngresada;
-            if (bien.pesoNeto) stock.pesoNeto = bien.pesoNeto;
-            if (bien.pesoBruto) stock.pesoBruto = bien.pesoBruto;
-
-            if (stock.cantidadTotal <= 0) {
-              stock.cantidadTotal = 0;
-              stock.cantidadDisponible = 0;
-              stock.estado = "AGOTADO";
-            } else {
-              stock.estado = "PARCIAL";
-            }
-
-            stock.ubicado = false;
-            stock.ubicaciones = [];
-            await stock.save();
+          if (!stock) {
+            throw new Error(`No se encontró stock registrado para el bien: ${bien.descripcion}`);
           }
+
+          // === VALIDACIÓN CON LAS REGLAS CORRECTAS ===
+          // No puedes despachar más de lo que tienes en el inventario global (cantidadTotal)
+          if (stock.cantidadTotal < bien.cantidadIngresada) {
+            throw new Error(
+              `Operación inválida. Intentas retirar ${bien.cantidadIngresada} unidades de "${bien.descripcion}", pero solo quedan ${stock.cantidadTotal} en stock total.`
+            );
+          }
+
+          // Limpiar ubicaciones (ya que el stock se altera)
+          await Ubicacion.updateMany(
+            { _id: { $in: stock.ubicaciones } },
+            { $pull: { bienes: { stockId: stock._id } } }
+          );
+          await Ubicacion.updateMany(
+            { _id: { $in: stock.ubicaciones }, bienes: { $size: 0 } },
+            { $set: { estado: "LIBRE", porcentaje: 0 } }
+          );
+
+          // Ajustamos el stock total real
+          stock.cantidadTotal -= bien.cantidadIngresada;
+
+          // Ojo aquí: Como cantidadDisponible es lo "no ubicado", si sacas stock, 
+          // asegúrate de que no quede en negativo si es que se saca de lo no ubicado,
+          // o simplemente reiníciala si el stock se agota por completo.
+          stock.cantidadDisponible = Math.max(0, stock.cantidadDisponible - bien.cantidadIngresada);
+
+          // --- Lógica de Pesos ---
+          if (bien.pesoNeto) {
+            const pesoNetoActual = parseFloat(stock.pesoNeto) || 0;
+            const pesoNetoSalida = parseFloat(bien.pesoNeto) || 0;
+            stock.pesoNeto = String(Math.max(0, pesoNetoActual - pesoNetoSalida));
+          }
+
+          if (bien.pesoBruto) {
+            const pesoBrutoActual = parseFloat(stock.pesoBruto) || 0;
+            const pesoBrutoSalida = parseFloat(bien.pesoBruto) || 0;
+            stock.pesoBruto = String(Math.max(0, pesoBrutoActual - pesoBrutoSalida));
+          }
+
+          // Determinar estado final del Stock
+          let accionHistorial;
+          if (stock.cantidadTotal <= 0) {
+            stock.cantidadTotal = 0;
+            stock.cantidadDisponible = 0;
+            stock.estado = "AGOTADO";
+            accionHistorial = "SALIDA COMPLETA";
+          } else {
+            stock.estado = "PARCIAL";
+            accionHistorial = "SALIDA PARCIAL";
+          }
+
+          // Registrar en el historial del stock
+          stock.historial.unshift({
+            fecha: new Date(),
+            accion: accionHistorial,
+            cantidadIngresada: bien.cantidadIngresada, // Unidades que salieron hoy
+            cantidadDisponible: stock.cantidadDisponible, // Lo que queda sin ubicar
+            cantidadTotal: stock.cantidadTotal, // Lo que queda en total
+            actualizadoPor: aprobadoPor,
+          });
+
+          stock.actualizadoPor = aprobadoPor;
+          stock.ubicado = false;
+          stock.ubicaciones = [];
+
+          await stock.save();
         }
       }
     }
+
 
     return res.status(200).json({
       message: estado === "APROBADO" ? "Aprobado y stock actualizado" : "Cambios guardados",

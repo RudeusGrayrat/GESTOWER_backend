@@ -37,7 +37,6 @@ const getStockAlmacen = async (req, res) => {
     }).select("_id");
     // Query principal
     const query = {
-      cantidadDisponible: { $gt: 0 },
       $or: [
         { descripcion: regex },
         // ELIMINADO:
