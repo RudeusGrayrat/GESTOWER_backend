@@ -214,9 +214,9 @@ const enviarBoleta = async (req, res) => {
           };
 
           await transporter.sendMail(mailOptions);
-          // findBoleta.envio = dayjs()
-          //   .tz("America/Lima")
-          //   .format("DD/MM/YYYY hh:mm A");
+          findBoleta.envio = dayjs()
+            .tz("America/Lima")
+            .format("DD/MM/YYYY hh:mm A");
           await findBoleta.save();
         } catch (error) {
           errores.push({ email, error: error.message });
