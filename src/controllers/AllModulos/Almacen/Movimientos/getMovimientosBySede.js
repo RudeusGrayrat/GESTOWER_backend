@@ -6,20 +6,23 @@ const getAllMovimientosBySede = async (req, res) => {
   const {
     contratoId,
     movimiento,
+    correlativa,
     page = 0,
     limit = 10,
     search = "",
   } = req.query;
-
   try {
     if (!contratoId) {
       return res.status(400).json({
-        message: "Falta el ID del contrato para filtrar los movimientos",
+        message: "Falta el ID del contrato para filtrar los movimientos", type: "Error"
       });
     }
     const query = { contratoId };
     if (movimiento && movimiento !== "TODOS") {
       query.movimiento = movimiento;
+    }
+    if (correlativa) {
+      query.correlativa = correlativa;
     }
     if (search) {
       const safeSearch = escapeRegExp(search);
@@ -54,6 +57,7 @@ const getAllMovimientosBySede = async (req, res) => {
 
     return res.json({ data, total });
   } catch (error) {
+    console.error("Error al obtener los movimientos:", error);
     return res
       .status(500)
       .json({ message: error.message || "Error al obtener los movimientos" });
