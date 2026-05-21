@@ -53,9 +53,9 @@ const movimientoSchema = new Schema(
     },
     descripcionBienes: [descripcionBienesSchema],
     detallesDePeso: String,
-    referenciaImagen: {
+    referenciaImagen: [{
       type: String,
-    },
+    }],
     observaciones: String,
     horaSalida: String,
     fechaSalida: String,

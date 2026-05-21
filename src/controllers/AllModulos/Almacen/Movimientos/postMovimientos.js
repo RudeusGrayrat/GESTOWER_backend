@@ -6,7 +6,7 @@ const dayjs = require("dayjs");
 const cleanBase64 = (str) => str?.includes(",") ? str.split(",")[1] : str;
 
 const createMovimiento = async (req, res) => {
-  let uploadedPublicId = null; // Para control de errores
+  let uploadedPublicId = []; // Para control de errores
 
   try {
     const { body } = req;
@@ -15,18 +15,25 @@ const createMovimiento = async (req, res) => {
       throw new Error("Faltan datos requeridos");
     }
 
-    // --- Subida de Imagen a Cloudinary ---
-    let imagenUrl = body.referenciaImagen;
-    if (body.referenciaImagen && body.referenciaImagen.startsWith("data:image")) {
-      const fileBuffer = Buffer.from(cleanBase64(body.referenciaImagen), "base64");
-      const fileName = `mov_${body.correlativa}_${dayjs().format("YYYY-MM-DD")}`;
-      const result = await uploadImage(fileBuffer, fileName);
+    // --- Subida de Múltiples Imágenes a Cloudinary ---
+    let imagenUrls = [];
+    if (body.referenciaImagen && Array.isArray(body.referenciaImagen)) {
+      for (let i = 0; i < body.referenciaImagen.length; i++) {
+        const img = body.referenciaImagen[i];
 
-      imagenUrl = result.secure_url;
-      uploadedPublicId = extractPublicId(result.secure_url);
+        if (img && img.startsWith("data:image")) {
+          const fileBuffer = Buffer.from(cleanBase64(img), "base64");
+          const fileName = `mov_${body.correlativa}_${dayjs().format("YYYY-MM-DD")}_img${i}`;
+          const result = await uploadImage(fileBuffer, fileName);
+
+          imagenUrls.push(result.secure_url);
+          uploadedPublicIds.push(extractPublicId(result.secure_url));
+        } else if (img && img.startsWith("http")) {
+          imagenUrls.push(img); // Si ya es URL de cloudinary remota
+        }
+      }
     }
 
-    // Generar correlativa según el tipo (INGRESO/SALIDA)
     const correlativa = await generarCorrelativa(
       body.movimiento,
       body.contrato,
@@ -35,7 +42,7 @@ const createMovimiento = async (req, res) => {
 
     const movimientoData = {
       ...body,
-      referenciaImagen: imagenUrl, // Guardamos la URL de Cloudinary
+      referenciaImagen: imagenUrls,
       correlativa,
       estado: body.estado || "PENDIENTE",
     };
@@ -49,9 +56,9 @@ const createMovimiento = async (req, res) => {
     });
 
   } catch (err) {
-    // Si hubo un error y la imagen se subió, la borramos
-    if (uploadedPublicId) {
-      await deleteImage(uploadedPublicId);
+    // Si hubo un error, borramos todas las imágenes subidas en esta transacción fallida
+    if (uploadedPublicIds.length > 0) {
+      await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));
     }
     return res.status(500).json({ message: err.message, type: "Error" });
   }

@@ -45,36 +45,38 @@ const patchMovimiento = async (req, res) => {
       return res.status(403).json({ message: "El registro ya está cerrado", type: "Error" });
     }
 
-    // --- GESTIÓN DE IMAGEN ---
-    // Usamos la misma lógica que el POST: startsWith("data:image")
-    if (referenciaImagen !== undefined) {
-      console.log("Referencia Imagen recibida:");
-      const esBase64Nueva = referenciaImagen && referenciaImagen.startsWith("data:image");
-      const quiereEliminar = referenciaImagen === "" || referenciaImagen === null;
-      console.log("Es base64 nueva?", esBase64Nueva);
-      console.log("Quiere eliminar imagen?", quiereEliminar);
+    // --- GESTIÓN DE ARRAY DE IMÁGENES ---
+    if (referenciaImagen !== undefined && Array.isArray(referenciaImagen)) {
+      const prevUrls = movPrevio.referenciaImagen || [];
 
-      if (esBase64Nueva) {
-        // Borrar imagen anterior si existe
-        if (movPrevio.referenciaImagen?.startsWith("http")) {
-          const oldId = extractPublicId(movPrevio.referenciaImagen);
+      // 1. Eliminar de Cloudinary las imágenes que el usuario quitó en el Front
+      for (const oldUrl of prevUrls) {
+        if (oldUrl.startsWith("http") && !referenciaImagen.includes(oldUrl)) {
+          const oldId = extractPublicId(oldUrl);
           if (oldId) await deleteImage(oldId);
         }
-        // Subir nueva imagen
-        const fileBuffer = Buffer.from(cleanBase64(referenciaImagen), "base64");
-        const fileName = `mov_${correlativa || _id}_${dayjs().format("YYYY-MM-DD")}`;
-        const result = await uploadImage(fileBuffer, fileName);
-        console.log("Image uploaded to Cloudinary:", result);
-        movPrevio.referenciaImagen = result.secure_url;
-        uploadedPublicIds.push(extractPublicId(result.secure_url));
-      } else if (quiereEliminar) {
-        if (movPrevio.referenciaImagen?.startsWith("http")) {
-          const oldId = extractPublicId(movPrevio.referenciaImagen);
-          if (oldId) await deleteImage(oldId);
-        }
-        movPrevio.referenciaImagen = "";
       }
-      // Si viene una URL de Cloudinary existente (sin cambios), no hacemos nada
+
+      // 2. Procesar el nuevo Array consolidado
+      const deFinales = [];
+      for (let i = 0; i < referenciaImagen.length; i++) {
+        const img = referenciaImagen[i];
+
+        if (img && img.startsWith("data:image")) {
+          // Nueva imagen en Base64 -> Subir a Cloudinary
+          const fileBuffer = Buffer.from(cleanBase64(img), "base64");
+          const fileName = `mov_${correlativa || _id}_${dayjs().format("YYYY-MM-DD")}_patch${i}`;
+          const result = await uploadImage(fileBuffer, fileName);
+
+          deFinales.push(result.secure_url);
+          uploadedPublicIds.push(extractPublicId(result.secure_url));
+        } else if (img && img.startsWith("http")) {
+          // Imagen existente -> Se conserva intacta
+          deFinales.push(img);
+        }
+      }
+
+      movPrevio.referenciaImagen = deFinales;
     }
 
     // --- CAMPOS SIMPLES (solo si vienen en el body) ---
@@ -232,7 +234,6 @@ const patchMovimiento = async (req, res) => {
       }
     }
 
-
     return res.status(200).json({
       message: estado === "APROBADO" ? "Aprobado y stock actualizado" : "Cambios guardados",
       movimiento: movActualizado,
@@ -240,7 +241,7 @@ const patchMovimiento = async (req, res) => {
     });
 
   } catch (error) {
-    // Rollback de imágenes subidas si algo falló
+    // Fallback Rollback por errores internos
     if (uploadedPublicIds.length > 0) {
       await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));
     }

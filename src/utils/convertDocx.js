@@ -44,6 +44,7 @@ const convertDocx = async (predata, templatePath) => {
                 // Puedes personalizar el tamaño según el nombre del tag en el Word
                 if (tagName === "logo_empresa") return [140, 70];
                 if (tagName === "firma") return [150, 80];
+                if (tagName === "url_imagen") return [180, 130];
                 return [100, 100]; // Tamaño por defecto
             },
         };

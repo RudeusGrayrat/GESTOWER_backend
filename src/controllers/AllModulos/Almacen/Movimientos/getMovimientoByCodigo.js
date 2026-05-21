@@ -8,7 +8,8 @@ const getMovimientoByCodigo = async (req, res) => {
 
   try {
     const query = {};
-    query.movimiento = "INGRESO";
+
+    if (movimiento && movimiento !== "TODOS") query.movimiento = movimiento;
     query.estado = "APROBADO";
     if (search) {
       const safeSearch = escapeRegExp(search);
