@@ -1,7 +1,7 @@
-const Business = require("../../models/Business");
 const Employee = require("../../models/Employees/Employee");
 const Widget = require("../../models/Herramientas/Widgets/Widget");
 const WidgetPreference = require("../../models/Herramientas/Widgets/WidgetPreference");
+const Business = require("../../models/RecursosHumanos/Business");
 const { hashPassword } = require("../../utils/bcrypt");
 
 const registerEmployee = async (req, res) => {

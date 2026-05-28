@@ -34,7 +34,7 @@ const getAsistenciaByParams = async (req, res) => {
         .skip(page * limit)
         .limit(parseInt(limit))
         .sort({ createdAt: -1 })
-        .populate("colaborador", "name lastname ")
+        .populate("colaborador", "name lastname photo")
         .lean(),
       AsistenciaColaborador.countDocuments(query),
     ]);

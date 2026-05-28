@@ -97,13 +97,16 @@ const updateAsistenciaColaborador = async (req, res) => {
       const diaSemana = fechaValida.day();
       const horaLimiteSalida =
         diaSemana === 6
-          ? dayjs("01:30 PM", "hh:mm A")
-          : dayjs("06:00 PM", "hh:mm A");
-
+          ? dayjs("01:00 PM", "hh:mm A")
+          : dayjs("05:30 PM", "hh:mm A");
+      const horaLimiteTolerancia = horaSalidaNormal.add(5, "minute");
       const horaSalida = dayjs(salida, "hh:mm A");
-      if (horaSalida.isAfter(horaLimiteSalida)) {
-        horasExtras = horaSalida.diff(horaLimiteSalida, "minute") + 30;
+      // Si salió después del margen de tolerancia (ej: después de la 1:05 PM)
+      if (horaSalida.isAfter(horaLimiteTolerancia)) {
+        // Calculamos los minutos extras basándonos en la hora de salida normal
+        horasExtras = horaSalida.diff(horaSalidaNormal, "minute");
       }
+      
       findAsistenciaColaborador.salida = salida;
       findAsistenciaColaborador.minExtras = horasExtras;
 

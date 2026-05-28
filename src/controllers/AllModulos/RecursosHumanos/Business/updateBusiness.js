@@ -1,4 +1,4 @@
-const Business = require("../../../../models/Business");
+const Business = require("../../../../models/RecursosHumanos/Business");
 
 const updateBusinessPartial = async (req, res) => {
   const { _id, ruc, razonSocial, domicilioFiscal, representative, logo } =

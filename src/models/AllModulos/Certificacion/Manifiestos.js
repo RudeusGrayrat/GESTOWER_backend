@@ -5,9 +5,12 @@ const manifiestoSchema = new mongoose.Schema(
         numeroManifiesto: { type: String, required: true, unique: true },
         año: { type: Number, required: true },
         mes: { type: String, required: true },
-        estado: { type: String, enum: ["PENDIENTE", "EN REVISION", "OBSERVADO", "SUBSANADO", "APROBADO", "RECHAZADO"], default: 'PENDIENTE' },
-        // Relaciones (IDs)
-        generadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Generador', required: true },
+        estado: {
+            type: String,
+            enum: ["BORRADOR", "EN REVISION", "OBSERVADO", "APROBADO", "RECIBIDO", "RECHAZADO"],
+            default: "EN REVISION"
+        },
+        generadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Generador' },
         responsableGestion: {
             nombreResponsable: { type: String, required: true },
             dniResponsable: { type: String, required: true },
@@ -100,7 +103,7 @@ const manifiestoSchema = new mongoose.Schema(
             dniResponsableEorsDestino: String,
             cargoResponsableEorsDestino: String,
             fechaReferendo: Date,
-            horaReferendo: String
+            horaReferendo: String,
         },
 
         // Sección 5.3: Otros manejos

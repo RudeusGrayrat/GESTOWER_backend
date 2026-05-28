@@ -61,10 +61,18 @@ const transportistaSchema = mongoose.Schema(
                 firmaResponsable: { type: String },
             }
         ],
+        // Dentro de transportistaSchema
         generadores: [
             {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'Generador',
+                generadorId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Generador',
+                    required: true
+                },
+                tienePermisoLlenado: {
+                    type: Boolean,
+                    default: false // Por defecto no tiene permiso (Caso más común/sin confianza)
+                }
             }
         ],
         conductores: [
