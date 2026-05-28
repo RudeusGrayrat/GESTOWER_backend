@@ -3,7 +3,8 @@ const AsistenciaColaborador = require("../../../../../models/RecursosHumanos/Asi
 const dayjs = require("dayjs");
 const customParseFormat = require("dayjs/plugin/customParseFormat");
 dayjs.extend(customParseFormat);
-const updateAsistenciaColaborador = async (req, res) => {
+
+const updateAsistenciaGestower = async (req, res) => {
     const {
         colaborador,
         fecha,
@@ -97,12 +98,12 @@ const updateAsistenciaColaborador = async (req, res) => {
             const diaSemana = fechaValida.day();
             const horaLimiteSalida =
                 diaSemana === 6
-                    ? dayjs("01:30 PM", "hh:mm A")
-                    : dayjs("06:00 PM", "hh:mm A");
+                    ? dayjs("01:05 PM", "hh:mm A")
+                    : dayjs("05:35 PM", "hh:mm A");
 
             const horaSalida = dayjs(salida, "hh:mm A");
             if (horaSalida.isAfter(horaLimiteSalida)) {
-                horasExtras = horaSalida.diff(horaLimiteSalida, "minute") + 30;
+                horasExtras = horaSalida.diff(horaLimiteSalida, "minute") + 5;
             }
             findAsistenciaColaborador.salida = salida;
             findAsistenciaColaborador.minExtras = horasExtras;
@@ -135,4 +136,4 @@ const updateAsistenciaColaborador = async (req, res) => {
     }
 };
 
-module.exports = updateAsistenciaColaborador;
+module.exports = updateAsistenciaGestower

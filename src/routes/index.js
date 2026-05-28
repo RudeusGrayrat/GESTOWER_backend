@@ -103,6 +103,7 @@ const herramientasRouter = require("./Modulos/Herramientas");
 const certificacionesRouter = require("./Modulos/Certificacion");
 const postAsistenciaApp = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/postAsistenciaApp");
 const almacenLurinRouter = require("./Modulos/Almcen");
+const updateAsistenciaGestower = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/patchAsistenciaApp");
 
 const router = Router();
 
@@ -146,6 +147,7 @@ router.patch("/patchClient", updateClient);
 router.patch("/patchContract", putContracts);
 router.patch("/patchPlantillaDeContrato", putPlantillaDeContrato);
 router.patch("/patchAsistenciaColaborador", updateAsistenciaColaborador);
+router.patch("/patchAsistenciaGestower", updateAsistenciaGestower);
 router.patch("/patchBoletaDePago", patchBoleDePago);
 router.patch("/patchWidget", patchWidget);
 router.patch("/updateWidgetPreference", updateWidgetPreference);

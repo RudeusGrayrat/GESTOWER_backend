@@ -66,12 +66,12 @@ const postAsistenciaColaborador = async (req, res) => {
       const diaSemana = dayjs(fecha).day();
       const horaLimiteSalida =
         diaSemana === 6
-          ? dayjs("01:30 PM", "hh:mm A")
-          : dayjs("06:00 PM", "hh:mm A");
+          ? dayjs("01:05 PM", "hh:mm A")
+          : dayjs("05:35 PM", "hh:mm A");
 
       const horaSalida = dayjs(salida, "hh:mm A");
       if (horaSalida.isAfter(horaLimiteSalida)) {
-        horasExtras = horaSalida.diff(horaLimiteSalida, "minute") + 30;
+        horasExtras = horaSalida.diff(horaLimiteSalida, "minute") + 5;
       }
     }
 
