@@ -147,7 +147,7 @@ router.patch("/patchClient", updateClient);
 router.patch("/patchContract", putContracts);
 router.patch("/patchPlantillaDeContrato", putPlantillaDeContrato);
 router.patch("/patchAsistenciaColaborador", updateAsistenciaColaborador);
-router.patch("/patchAsistenciaGestower", updateAsistenciaGestower);
+router.patch("/patchAsistenciaERP", updateAsistenciaGestower);
 router.patch("/patchBoletaDePago", patchBoleDePago);
 router.patch("/patchWidget", patchWidget);
 router.patch("/updateWidgetPreference", updateWidgetPreference);
