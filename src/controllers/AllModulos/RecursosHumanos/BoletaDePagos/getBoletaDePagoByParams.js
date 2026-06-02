@@ -73,6 +73,7 @@ const getBoletaDePagoByParams = async (req, res) => {
     const [data, total] = await Promise.all([
       BoletaDePagos.find(query)
         .populate("colaborador")
+        .populate("empresaColaborador", "ruc razonSocial")
         .skip(page * limit)
         .limit(limit)
         .sort({ correlativa: -1 })
