@@ -17,6 +17,8 @@ const getBoletaDePagoByParams = async (req, res) => {
     if (search) {
       const safeSearch = escapeRegExp(search);
       const regex = new RegExp(safeSearch, "i");
+
+      // 1. Buscamos colaboradores que coincidan con el texto
       const colaboradores = await Employee.find({
         $or: [
           { name: regex },
@@ -28,9 +30,9 @@ const getBoletaDePagoByParams = async (req, res) => {
 
       const colaboradoresIds = colaboradores.map((c) => c._id);
 
-      // Paso 2: usar esos IDs en la búsqueda principal
-      query.$or = [
-        { colaborador: { $in: colaboradoresIds } },
+      // 2. Construimos el OR solo para campos de texto, 
+      // y el campo de referencia (colaborador) lo manejamos por separado
+      const textFilters = [
         { state: regex },
         { fechaBoletaDePago: regex },
         { envio: regex },
@@ -44,6 +46,12 @@ const getBoletaDePagoByParams = async (req, res) => {
             },
           },
         },
+      ];
+
+      // Paso 2: usar esos IDs en la búsqueda principal
+      query.$or = [
+        { colaborador: { $in: colaboradoresIds } },
+        ...textFilters
       ];
     }
     if (empresa) {
