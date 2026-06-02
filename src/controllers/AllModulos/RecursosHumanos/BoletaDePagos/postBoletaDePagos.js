@@ -1,4 +1,5 @@
 const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
+const Business = require("../../../../models/RecursosHumanos/Business");
 const generarCorrelativa = require("./correlativa");
 
 const postBoletaDePagos = async (req, res) => {
@@ -45,14 +46,21 @@ const postBoletaDePagos = async (req, res) => {
         .status(400)
         .json({ message: "Por favor llena todos los campos" });
     }
+    const business = colaborador.business;
+    if (!business)
+      return res.status(400).json({ message: "El colaborador no tiene empresa asignada" });
     const correlativa = await generarCorrelativa(fechaOperacionDate);
     if (!correlativa)
       return res.status(500).json({ message: "Error al generar correlativa" });
+    const findBusiness = await Business.findOne({ razonSocial: business });
+    if (!findBusiness)
+      return res.status(400).json({ message: "No se encontró la empresa del colaborador" });
+
     const boleta = new BoletaDePagos({
       correlativa,
       fechaBoletaDePago,
       colaborador: idColaborador,
-      empresaColaborador: colaborador.business,
+      empresaColaborador: findBusiness._id,
       fechaIngresoColaborador: colaborador?.dateStart,
       diasTrabajados,
       diasSubsidiados,

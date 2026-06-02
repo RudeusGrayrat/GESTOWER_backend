@@ -2,28 +2,28 @@ const Movimiento = require("../../../../models/AllModulos/Almacen/Movimiento");
 const escapeRegExp = require("../../../../utils/regex/regex");
 
 const getMovimientoByCodigo = async (req, res) => {
-  const { page = 0,
-    limit = 10,
-    search = "" } = req.query;
+  // Ya no necesitamos el parámetro 'movimiento' desde el frontend, 
+  // porque este controlador es exclusivo para buscar INGRESOS.
+  const { page = 0, limit = 10, search = "" } = req.query;
 
   try {
-    const query = {};
+    // REGLA DE ORO: Solo ingresos y solo aprobados
+    const query = {
+      movimiento: "INGRESO",
+      estado: "APROBADO"
+    };
 
-    if (movimiento && movimiento !== "TODOS") query.movimiento = movimiento;
-    query.estado = "APROBADO";
     if (search) {
       const safeSearch = escapeRegExp(search);
       const regex = new RegExp(safeSearch, "i");
-      const movimientos = await Movimiento.find({
-        $or: [
-          { movimiento: regex },
-          { correlativa: regex },
-          { numeroDeActa: regex },
-        ]
-      }).select("_id");
 
-      const movimientosIds = movimientos.map((c) => c._id);
-      query.$or = [{ _id: { $in: movimientosIds } }];
+      // Mongoose buscará que cumpla las condiciones de arriba (INGRESO y APROBADO)
+      // Y ADEMÁS que el texto coincida con alguno de estos campos
+      query.$or = [
+        { correlativa: regex },
+        { numeroDeActa: regex },
+        { codigoIngreso: regex }, // Añadido por si buscan por el código de barras/ingreso
+      ];
     }
 
     const [data, total] = await Promise.all([

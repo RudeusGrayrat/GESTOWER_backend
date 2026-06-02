@@ -42,6 +42,7 @@ const stockSchema = new Schema(
           cantidadTotal: Number,
           ubicacion: String,
           actualizadoPor: { type: Schema.Types.ObjectId, ref: "Employee" },
+          movimientoId: { type: Schema.Types.ObjectId, ref: "Movimiento" }
         },
       ],
       default: [],

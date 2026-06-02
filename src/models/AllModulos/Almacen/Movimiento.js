@@ -9,6 +9,7 @@ const descripcionBienesSchema = new Schema(
 
     cantidadIngresada: { type: Number },
     cantidadDisponible: { type: Number },
+    stockFinal: { type: Number },
 
     pesoNeto: String,
     pesoBruto: String,
