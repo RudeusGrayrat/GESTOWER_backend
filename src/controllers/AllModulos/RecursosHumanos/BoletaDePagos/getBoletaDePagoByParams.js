@@ -83,6 +83,7 @@ const getBoletaDePagoByParams = async (req, res) => {
 
     return res.json({ data, total });
   } catch (error) {
+    console.error("Error al obtener las boletas de pago por parámetros:", error);
     return res.status(500).json({
       message: error.message || "Error al obtener las boletas de pago",
     });
