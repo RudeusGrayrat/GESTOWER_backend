@@ -4,9 +4,11 @@ const getBoletaDePagos = async (req, res) => {
   const { desde, hasta, empresa } = req.query;
   const query = {};
   try {
+    const matchQuery = {};
     if (desde && hasta) {
-      query.fechaBoletaDePago = { $gte: desde, $lte: hasta };
+      matchQuery.fechaBoletaDePago = { $gte: desde, $lte: hasta };
     }
+    // Si 'empresa' viene, filtramos por el campo empresaColaborador (que ya es ObjectId)
     if (empresa) {
       matchQuery.empresaColaborador = new mongoose.Types.ObjectId(empresa);
     }
