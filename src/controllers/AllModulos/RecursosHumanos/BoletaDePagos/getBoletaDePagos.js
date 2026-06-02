@@ -7,33 +7,32 @@ const getBoletaDePagos = async (req, res) => {
     if (desde && hasta) {
       query.fechaBoletaDePago = { $gte: desde, $lte: hasta };
     }
-
-    const boleta = await BoletaDePagos.aggregate([
-      {
-        $match: {
-          ...(desde && hasta
-            ? { fechaBoletaDePago: { $gte: desde, $lte: hasta } }
-            : {}),
-        },
-      },
+    if (empresa) {
+      matchQuery.empresaColaborador = new mongoose.Types.ObjectId(empresa);
+    }
+    const boletas = await BoletaDePagos.aggregate([
+      { $match: matchQuery },
       {
         $lookup: {
-          from: "employees", // 👈 nombre de la colección Employee
+          from: "employees",
           localField: "colaborador",
           foreignField: "_id",
-          as: "colaborador",
-        },
+          as: "colaborador"
+        }
       },
       { $unwind: "$colaborador" },
       {
-        $match: empresa ? { "colaborador.business": empresa } : {},
+        $lookup: {
+          from: "businesses", // Asegúrate de que el nombre de la colección sea correcto
+          localField: "empresaColaborador",
+          foreignField: "_id",
+          as: "empresaColaborador"
+        }
       },
+      { $unwind: { path: "$empresaColaborador", preserveNullAndEmptyArrays: true } }
     ]);
 
-    if (!boleta || boleta.length === 0) {
-      return res.status(404).json({ message: "Boleta de pagos no encontrada" });
-    }
-    return res.status(200).json(boleta);
+    return res.status(200).json(boletas);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
