@@ -104,6 +104,7 @@ const certificacionesRouter = require("./Modulos/Certificacion");
 const postAsistenciaApp = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/postAsistenciaApp");
 const almacenLurinRouter = require("./Modulos/Almcen");
 const updateAsistenciaGestower = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/patchAsistenciaApp");
+const manifesTower = require("./Modulos/ManifesTower");
 
 const router = Router();
 
@@ -216,5 +217,6 @@ router.use("/almacenLurin", almacenLurinRouter);
 router.use("/rrhh", recursosHumanosRouter);
 router.use("/herramientas", herramientasRouter);
 router.use("/certificaciones", certificacionesRouter);
+router.use("/manifesTower", manifesTower);
 
 module.exports = router;

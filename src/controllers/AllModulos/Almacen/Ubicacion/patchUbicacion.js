@@ -74,7 +74,8 @@ const patchUbicacion = async (req, res) => {
               cantidadTotal: stockDoc.cantidadTotal,
               ubicacion: `${ubicacion.rack}-${ubicacion.nivel}-${ubicacion.seccion}`,
               accion: tipoAccion, // <--- Nuevo campo aprovechado
-              actualizadoPor
+              actualizadoPor,
+              movimientoId: stockDoc.movimientoId || null, // Mantener referencia al movimiento original si existe
             });
 
             await stockDoc.save();

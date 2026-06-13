@@ -223,6 +223,7 @@ const patchMovimiento = async (req, res) => {
             cantidadDisponible: stock.cantidadDisponible, // Lo que queda sin ubicar
             cantidadTotal: stock.cantidadTotal, // Lo que queda en total
             actualizadoPor: aprobadoPor,
+            movimientoId: movActualizado._id,
           });
 
           stock.actualizadoPor = aprobadoPor;

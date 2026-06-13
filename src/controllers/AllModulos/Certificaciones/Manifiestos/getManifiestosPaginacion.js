@@ -13,15 +13,28 @@ const getManifiestoPagination = async (req, res) => {
             search = "",
             año = "",
             mes = "",
-            estado = ""
+            estado = "",
+            usuario = ""
         } = req.query;
         const query = {};
+        const andConditions = [];
 
         // Filtros específicos
         if (año) query.año = parseInt(año);
         if (mes) query.mes = parseInt(mes);
         if (estado) query.estado = estado;
 
+        if (usuario) {
+            andConditions.push({
+                $or: [
+                    { creadoPor: usuario },
+                    { modificadoPor: usuario },
+                    { generadorId: usuario },
+                    { transportistaId: usuario },
+                ],
+            });
+        }
+        
         if (search) {
             const safeSearch = escapeRegExp(search);
             const regex = new RegExp(safeSearch, "i");
@@ -34,31 +47,35 @@ const getManifiestoPagination = async (req, res) => {
                 Destino.find({ razonSocial: regex }).select("_id")
             ]);
 
-            const generadoresIds = generadores.map(g => g._id);
-            const plantasIds = plantas.map(p => p._id);
-            const transportistasIds = transportistas.map(t => t._id);
-            const destinosIds = destinos.map(d => d._id);
+            const generadoresIds = generadores?.map(g => g._id);
+            const plantasIds = plantas?.map(p => p._id);
+            const transportistasIds = transportistas?.map(t => t._id);
+            const destinosIds = destinos?.map(d => d._id);
 
-            query.$or = [
-                { numeroManifiesto: regex },
-                { "residuo.descripcion": regex },
-                { "transporte.nombreConductor": regex },
-                { "transporte.placaVehiculo": regex },
-                { generadorId: { $in: generadoresIds } },
-                { plantaId: { $in: plantasIds } },
-                { transportistaId: { $in: transportistasIds } },
-                { destinoId: { $in: destinosIds } },
-                {
-                    $expr: {
-                        $regexMatch: {
-                            input: { $toString: "$año" },
-                            regex: safeSearch,
-                            options: "i",
+            andConditions.push({
+                $or: [
+                    { numeroManifiesto: regex },
+                    { "residuo.descripcion": regex },
+                    { "transporte.nombreConductor": regex },
+                    { "transporte.placaVehiculo": regex },
+                    { generadorId: { $in: generadoresIds } },
+                    { plantaId: { $in: plantasIds } },
+                    { transportistaId: { $in: transportistasIds } },
+                    { destinoId: { $in: destinosIds } },
+                    {
+                        $expr: {
+                            $regexMatch: {
+                                input: { $toString: "$año" },
+                                regex: safeSearch,
+                                options: "i",
+                            },
                         },
                     },
-                },
-            ];
+                ],
+            });
         }
+
+        if (andConditions.length) query.$and = andConditions;
 
         const [data, total] = await Promise.all([
             Manifiesto.find(query)

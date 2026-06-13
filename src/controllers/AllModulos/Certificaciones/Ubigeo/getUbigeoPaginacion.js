@@ -40,8 +40,6 @@ const getUbigeoPagination = async (req, res) => {
                 .sort({ departamento: 1, provincia: 1, distrito: 1 }),
             Ubigeo.countDocuments(query),
         ]);
-        console.log("Query de búsqueda de ubigeos:", query);
-        console.log("Ubigeos encontrados:", data);
         return res.json({ data, total });
     } catch (error) {
         return res.status(500).json({ message: error.message || "Error al buscar ubigeos" });

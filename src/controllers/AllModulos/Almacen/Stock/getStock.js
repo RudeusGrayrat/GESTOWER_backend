@@ -28,20 +28,12 @@ const getStockAlmacen = async (req, res) => {
       nombre: regex,
     }).select("_id");
 
-    // CORREGIDO: ahora busca por correlativa O numeroDeActa
-    const movimientos = await Movimiento.find({
-      $or: [
-        { correlativa: regex },
-        { numeroDeActa: regex },
-      ],
-    }).select("_id");
     // Query principal
     const query = {
       $or: [
         { descripcion: regex },
-        // ELIMINADO:
-        // { subItem: regex }
-        // porque subItem no existe en Stock
+        { codigoIngreso: regex },
+        { numeroDeActa: regex },
         {
           contratoId: {
             $in: contratos.map((x) => x._id),
@@ -56,12 +48,7 @@ const getStockAlmacen = async (req, res) => {
           creadoPor: {
             $in: usuarios.map((x) => x._id),
           },
-        },
-        {
-          movimientoId: {
-            $in: movimientos.map((x) => x._id),
-          },
-        },
+        }
       ],
     };
 
@@ -91,8 +78,8 @@ const getStockAlmacen = async (req, res) => {
 
       return {
         _id: stock._id,
-        correlativaActa: stock.movimientoId?.correlativa,
-        numeroDeActa: stock.movimientoId?.numeroDeActa,
+        codigoIngreso: stock.movimientoId?.correlativa || stock.codigoIngreso || "N/A",
+        numeroDeActa: stock.numeroDeActa,
         contrato: stock.contratoId?.cliente || "N/A",
         descripcion: stock.descripcion,
         cantidadDisponible: stock.cantidadDisponible,
@@ -107,7 +94,7 @@ const getStockAlmacen = async (req, res) => {
         creadoPorNombre: stock.creadoPor
           ? `${stock.creadoPor.name} ${stock.creadoPor.lastname}`
           : "N/A",
-        fechaIngreso: stock.movimientoId?.datosGenerales?.fecha,
+        fechaIngreso: stock.fechaIngreso || stock.movimientoId?.datosGenerales?.fecha,
         estado: stock.estado,
       };
     });

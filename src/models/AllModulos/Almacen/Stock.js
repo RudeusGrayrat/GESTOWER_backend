@@ -6,22 +6,24 @@ const stockSchema = new Schema(
     movimientoId: {
       type: Schema.Types.ObjectId,
       ref: "Movimiento",
+      required: false,
+    },
+    descripcion: {
+      type: String,
       required: true,
     },
-
+    codigoIngreso: { type: String, required: false },
+    numeroDeActa: { type: String, required: false },
+    fechaIngreso: { type: String, required: false },
     bienId: {
       type: Schema.Types.ObjectId,
-      required: true,
+      required: false,
     },
     item: Number,
     pesoNeto: String,
     pesoBruto: String,
     unidadDeMedida: String,
 
-    descripcion: {
-      type: String,
-      required: true,
-    },
 
     cantidadTotal: {
       type: Number,
@@ -42,7 +44,7 @@ const stockSchema = new Schema(
           cantidadTotal: Number,
           ubicacion: String,
           actualizadoPor: { type: Schema.Types.ObjectId, ref: "Employee" },
-          movimientoId: { type: Schema.Types.ObjectId, ref: "Movimiento" }
+          correlativa: String,
         },
       ],
       default: [],
@@ -56,13 +58,13 @@ const stockSchema = new Schema(
     sedeId: {
       type: Schema.Types.ObjectId,
       ref: "Sede",
-      required: true,
+      required: false,
     },
 
     contratoId: {
       type: Schema.Types.ObjectId,
       ref: "Contrato",
-      required: true,
+      required: false,
     },
 
     creadoPor: {

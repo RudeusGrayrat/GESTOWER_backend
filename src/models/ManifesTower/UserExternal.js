@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const userExternalSchema = new mongoose.Schema(
     {
         ruc: {
-            type: Number,
+            type: String,
             required: true,
             unique: true, // Un solo registro de autenticación por RUC
         },
@@ -14,10 +14,18 @@ const userExternalSchema = new mongoose.Schema(
         roles: [
             {
                 type: String,
-                enum: ["GENERADOR", "TRANSPORTISTA"],
+                enum: ["GENERADOR", "TRANSPORTISTA", "ADMIN"],
                 required: true,
             }
         ],
+        generadorId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Generador",
+        },
+        transportistaId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Transportista",
+        },
         estado: {
             type: String,
             enum: ["ACTIVO", "INACTIVO"],

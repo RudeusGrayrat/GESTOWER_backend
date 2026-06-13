@@ -38,7 +38,13 @@ const updateAsistenciaColaborador = async (req, res) => {
     if (!findAsistenciaColaborador) {
       return res.status(404).json({ message: "No se encontró esta asistencia" });
     }
+    const fechaValida = dayjs(fecha, "DD/MM/YYYY", true);
+    if (!fechaValida.isValid()) {
+      return res.status(400).json({ message: "Fecha inválida" });
+    }
 
+    const diaSemana = fechaValida.day();
+    const sabado = diaSemana === 6;
     const nombre = `${findColaborador.name} ${findColaborador.lastname}`;
 
     // Validaciones de orden y duplicados
@@ -52,9 +58,9 @@ const updateAsistenciaColaborador = async (req, res) => {
       return res.status(400).json({ message: `${nombre} ya marcó el Fin de Almuerzo` });
 
     if (salida) {
-      if (!findAsistenciaColaborador.inicioAlmuerzo)
+      if (!findAsistenciaColaborador.inicioAlmuerzo && !sabado)
         return res.status(400).json({ message: `${nombre} debe marcar el Inicio de Almuerzo antes de la Salida` });
-      if (!findAsistenciaColaborador.finAlmuerzo)
+      if (!findAsistenciaColaborador.finAlmuerzo && !sabado)
         return res.status(400).json({ message: `${nombre} debe marcar el Fin de Almuerzo antes de la Salida` });
       if (findAsistenciaColaborador.salida)
         return res.status(400).json({ message: `${nombre} ya marcó la Salida` });

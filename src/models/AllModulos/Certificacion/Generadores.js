@@ -7,7 +7,7 @@ const generadorSchema = mongoose.Schema(
             required: true,
         },
         ruc: {
-            type: Number,
+            type: String,
             required: true,
             unique: true,
         },
@@ -50,7 +50,7 @@ const generadorSchema = mongoose.Schema(
         }],
         estado: {
             type: String,
-            enum: ["ACTIVO", "INACTIVO"],
+            enum: ["ACTIVO", "INACTIVO", "SUSPENDIDO"],
             default: "ACTIVO",
         },
     },

@@ -1,4 +1,4 @@
-const { default: mongoose } = require("mongoose");
+const mongoose = require("mongoose");
 
 const transportistaSchema = mongoose.Schema(
     {
@@ -7,7 +7,7 @@ const transportistaSchema = mongoose.Schema(
             required: true,
         },
         ruc: {
-            type: Number,
+            type: String,
             required: true,
             unique: true,
         },
