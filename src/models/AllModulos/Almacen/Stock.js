@@ -6,7 +6,7 @@ const stockSchema = new Schema(
     movimientoId: {
       type: Schema.Types.ObjectId,
       ref: "Movimiento",
-      required: false,
+
     },
     descripcion: {
       type: String,
@@ -17,7 +17,7 @@ const stockSchema = new Schema(
     fechaIngreso: { type: String, required: false },
     bienId: {
       type: Schema.Types.ObjectId,
-      required: false,
+
     },
     item: Number,
     pesoNeto: String,
@@ -58,13 +58,13 @@ const stockSchema = new Schema(
     sedeId: {
       type: Schema.Types.ObjectId,
       ref: "Sede",
-      required: false,
+
     },
 
     contratoId: {
       type: Schema.Types.ObjectId,
       ref: "Contrato",
-      required: false,
+
     },
 
     creadoPor: {

@@ -157,9 +157,12 @@ const patchMovimiento = async (req, res) => {
 
       if (movActualizado.movimiento === "SALIDA") {
         for (const bien of movActualizado.descripcionBienes) {
+          console.log("Procesando salida para bien:", bien)
+          console.log(`Procesando salida para bien: ${bien.descripcion}, cantidad: ${bien.cantidadIngresada}`);
           const idABuscar = bien.bienIdOriginal || bien._id;
+          console.log(`Buscando stock para bienId: ${idABuscar} (bien: ${bien.descripcion})`);
           const stock = await StockAlmacen.findOne({ bienId: idABuscar });
-
+          console.log(`Stock encontrado para "${bien.descripcion}":`, stock);
           if (!stock) {
             throw new Error(`No se encontró stock registrado para el bien: ${bien.descripcion}`);
           }

@@ -73,7 +73,7 @@ const movimientoSchema = new Schema(
     creadoPor: {
       type: Schema.Types.ObjectId,
       ref: "Employee",
-      required: true,
+      // required: true,
     },
     actualizadoPor: {
       type: Schema.Types.ObjectId,

@@ -71,12 +71,13 @@ const getStockAlmacen = async (req, res) => {
     ]);
 
     // ... (mismo inicio del controlador hasta el mapper)
-
+    console.log("Raw data obtenida de la base de datos:", raw_data);
     const data = raw_data.map((stock) => {
       // YA NO necesitamos buscar bienData dentro de movimientoId
       // porque ahora el Stock tiene sus propios campos de peso y medida.
 
       return {
+        ...stock,
         _id: stock._id,
         codigoIngreso: stock.movimientoId?.correlativa || stock.codigoIngreso || "N/A",
         numeroDeActa: stock.numeroDeActa,
