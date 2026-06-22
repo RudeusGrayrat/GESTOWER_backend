@@ -81,6 +81,10 @@ const transportistaSchema = mongoose.Schema(
                 licencia: { type: String },
             }
         ],
+        usuarioManifestower: {
+            type: Boolean,
+            default: false
+        },
         estado: {
             type: String,
             enum: ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'],

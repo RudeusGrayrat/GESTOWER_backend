@@ -48,6 +48,7 @@ const generadorSchema = mongoose.Schema(
             telefonoResponsable: { type: String },
             firmaResponsable: { type: String },
         }],
+        usuarioManifestower: { type: Boolean, default: false },
         estado: {
             type: String,
             enum: ["ACTIVO", "INACTIVO", "SUSPENDIDO"],

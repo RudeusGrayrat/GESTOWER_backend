@@ -11,7 +11,7 @@ const patchGenerador = async (req, res) => {
         const {
             razonSocial, ruc, correoElectronico, telefono,
             representanteLegal, dniRepresentante, plantas, responsablesTecnicos, estado,
-            password // <-- Recibimos password desde el check del ERP para aprobar/crear cuenta
+            usuarioManifestower, password // ⬅️ Parámetros de control
         } = req.body;
 
         if (!generadorId) {
@@ -23,17 +23,18 @@ const patchGenerador = async (req, res) => {
             return res.status(404).json({ message: "Generador no encontrado", type: "Error" });
         }
 
-        // Actualizaciones de campos comunes
+        // Actualizaciones básicas
         if (razonSocial) findGenerador.razonSocial = razonSocial;
         if (ruc) findGenerador.ruc = ruc;
         if (correoElectronico) findGenerador.correoElectronico = correoElectronico;
         if (telefono) findGenerador.telefono = telefono;
-        if (representanteLegal) findGenerador.representanteLegal = representanteLegal;
+        if (representanteLegal) findGenerador.representanteLegal = representativeLegal;
         if (dniRepresentante) findGenerador.dniRepresentante = dniRepresentante;
         if (plantas) findGenerador.plantas = plantas;
         if (estado) findGenerador.estado = estado;
+        if (usuarioManifestower !== undefined) findGenerador.usuarioManifestower = usuarioManifestower;
 
-        // Actualizar firmas de responsables
+        // Firmas de responsables
         if (responsablesTecnicos) {
             const responsablesActualizados = await Promise.all(
                 responsablesTecnicos.map(async (responsable) => {
@@ -59,23 +60,30 @@ const patchGenerador = async (req, res) => {
 
         const updatedGenerador = await findGenerador.save();
 
-        // ── LÓGICA DE APROBACIÓN DE USUARIO POR SISTEMAS ──
-        if (password) {
+        // ── LÓGICA DE CONTROL DE USUARIO EN PATCH ──
+        if (usuarioManifestower === true) {
             const usuarioExistente = await UserExternal.findOne({ ruc: findGenerador.ruc });
             const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
+
+            // Si mandan password personalizado lo usamos, sino por defecto su RUC
+            const contraseñaDefecto = password ? password : findGenerador.ruc;
+            const hashedPassword = await bcrypt.hash(contraseñaDefecto, salt);
 
             if (usuarioExistente) {
-                // Si el usuario ya existía (ej. como Transportista), unimos los roles
-                if (!usuarioExistente.roles.includes("GENERADOR")) {
-                    usuarioExistente.roles.push("GENERADOR");
+                // ⚠️ Alerta si ya tenía el acceso de Generador previamente
+                if (usuarioExistente.roles.includes("GENERADOR")) {
+                    return res.status(400).json({
+                        message: "El usuario ya cuenta con un acceso activo para este módulo.",
+                        type: "Alerta"
+                    });
                 }
+                // Si existía con otro rol, le sumamos este
+                usuarioExistente.roles.push("GENERADOR");
                 usuarioExistente.generadorId = updatedGenerador._id;
-                // Si quieres actualizar la contraseña a la digitada en la aprobación:
-                usuarioExistente.password = hashedPassword;
+                if (password) usuarioExistente.password = hashedPassword;
                 await usuarioExistente.save();
             } else {
-                // Si no existía ninguna cuenta con este RUC, la creamos desde cero
+                // Crear usuario desde cero
                 const nuevoUsuario = new UserExternal({
                     ruc: findGenerador.ruc,
                     password: hashedPassword,
@@ -86,9 +94,25 @@ const patchGenerador = async (req, res) => {
                 await nuevoUsuario.save();
             }
         }
+        else if (usuarioManifestower === false) {
+            // 🚫 Desactivación / Eliminación lógica de accesos
+            const usuarioExistente = await UserExternal.findOne({ ruc: findGenerador.ruc });
+            if (usuarioExistente && usuarioExistente.roles.includes("GENERADOR")) {
+                if (usuarioExistente.roles.length === 1) {
+                    usuarioExistente.estado = "INACTIVO";
+                    usuarioExistente.generadorId = null;
+                    await usuarioExistente.save();
+                } else {
+                    // Si tiene múltiples roles (ej. Transportista), solo removemos privilegios de Generador
+                    usuarioExistente.roles = usuarioExistente.roles.filter(role => role !== "GENERADOR");
+                    usuarioExistente.generadorId = null;
+                    await usuarioExistente.save();
+                }
+            }
+        }
 
         return res.status(200).json({
-            message: password ? "Generador actualizado y accesos de usuario aprobados" : "Generador actualizado exitosamente",
+            message: "Generador y permisos procesados correctamente",
             data: updatedGenerador,
             type: "Correcto"
         });

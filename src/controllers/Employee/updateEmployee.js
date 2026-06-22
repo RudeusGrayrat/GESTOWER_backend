@@ -1,8 +1,7 @@
 const Employee = require("../../models/Employees/Employee");
 const { hashPassword } = require("../../utils/bcrypt");
 const { deleteImage } = require("../../utils/cloudinary/images");
-const sendNotification = require("../Herramientas/Notification/CreateNotification");
-// const createNotification = require("../Herramientas/Notification/CreateNotification");
+const NotificationService = require("../Herramientas/Notification/CreateNotification");
 
 const updateEmployeePartial = async (req, res) => {
   const {
@@ -36,6 +35,7 @@ const updateEmployeePartial = async (req, res) => {
     regimenPension,
     codigoSpp,
     asistenciaAutomatica,
+    actualizadoPor,
   } = req.body;
   const io = req.app.get("io");
 
@@ -48,58 +48,151 @@ const updateEmployeePartial = async (req, res) => {
     if (!userFound) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
+    let camposCambiados = [];
 
-    if (name) userFound.name = name;
-    if (lastname) userFound.lastname = lastname;
-    if (typeDocument) userFound.typeDocument = typeDocument;
-    if (documentNumber) userFound.documentNumber = documentNumber;
-    if (type) userFound.type = type;
-    if (state) userFound.state = state;
-    if (dateOfBirth) userFound.dateOfBirth = dateOfBirth;
-    if (dateStart) userFound.dateStart = dateStart;
-    if (genre) userFound.genre = genre;
-    if (civilStatus) userFound.civilStatus = civilStatus;
-    if (phone) userFound.phone = phone;
-    if (telephone) userFound.telephone = telephone;
-    if (email) userFound.email = email;
-    if (location) userFound.location = location;
-    if (charge) userFound.charge = charge;
-    if (area) userFound.area = area;
-    if (sueldo) userFound.sueldo = sueldo;
-    if (user) userFound.user = user;
-    if (modules) userFound.modules = modules;
-    if (phoneCode) userFound.phoneCode = phoneCode;
-    if (phoneNumber) userFound.phoneNumber = phoneNumber;
-    if (business) userFound.business = business;
-    if (sede) userFound.sede = sede;
-    if (regimenPension) userFound.regimenPension = regimenPension;
-    if (codigoSpp) userFound.codigoSpp = codigoSpp;
-    if (asistenciaAutomatica)
+    if (name) {
+      camposCambiados.push("Nombres");
+      userFound.name = name
+    };
+    if (lastname) {
+      camposCambiados.push("Apellidos");
+      userFound.lastname = lastname;
+    }
+    if (typeDocument) {
+      camposCambiados.push("Tipo de Documento");
+      userFound.typeDocument = typeDocument;
+    }
+    if (documentNumber) {
+      camposCambiados.push("Número de Documento");
+      userFound.documentNumber = documentNumber;
+    }
+    if (type) {
+      camposCambiados.push("Tipo");
+      userFound.type = type;
+    }
+    if (state) {
+      camposCambiados.push("Estado");
+      userFound.state = state;
+    }
+    if (dateOfBirth) {
+      camposCambiados.push("Fecha de Nacimiento");
+      userFound.dateOfBirth = dateOfBirth;
+    }
+    if (dateStart) {
+      camposCambiados.push("Fecha de Inicio");
+      userFound.dateStart = dateStart;
+    }
+    if (genre) {
+      camposCambiados.push("Género");
+      userFound.genre = genre;
+    }
+    if (civilStatus) {
+      camposCambiados.push("Estado Civil");
+      userFound.civilStatus = civilStatus;
+    }
+    if (phone) {
+      camposCambiados.push("Teléfono");
+      userFound.phone = phone;
+    }
+    if (telephone) {
+      camposCambiados.push("Teléfono Secundario");
+      userFound.telephone = telephone;
+    }
+    if (email) {
+      camposCambiados.push("Correo Electrónico");
+      userFound.email = email;
+    }
+    if (location) {
+      camposCambiados.push("Ubicación");
+      userFound.location = location;
+    }
+    if (charge) {
+      camposCambiados.push("Cargo");
+      userFound.charge = charge;
+    }
+    if (area) {
+      camposCambiados.push("Área");
+      userFound.area = area;
+    }
+    if (sueldo) {
+      camposCambiados.push("Sueldo");
+      userFound.sueldo = sueldo;
+    }
+    if (user) {
+      camposCambiados.push("Usuario");
+      userFound.user = user;
+    }
+    if (modules) {
+      camposCambiados.push("Módulos");
+      userFound.modules = modules;
+    }
+    if (phoneCode) {
+      camposCambiados.push("Código de Teléfono");
+      userFound.phoneCode = phoneCode;
+    }
+    if (phoneNumber) {
+      camposCambiados.push("Número de Teléfono");
+      userFound.phoneNumber = phoneNumber;
+    }
+    if (business) {
+      camposCambiados.push("Empresa");
+      userFound.business = business;
+    }
+    if (sede) {
+      camposCambiados.push("Sede");
+      userFound.sede = sede;
+    }
+    if (regimenPension) {
+      camposCambiados.push("Régimen de Pensión");
+      userFound.regimenPension = regimenPension;
+    }
+    if (codigoSpp) {
+      camposCambiados.push("Código SPP");
+      userFound.codigoSpp = codigoSpp;
+    }
+    if (asistenciaAutomatica) {
+      camposCambiados.push("Asistencia Automática");
       userFound.asistenciaAutomatica = asistenciaAutomatica;
+    }
     if (photo) {
+      camposCambiados.push("Foto");
       userFound.photo = photo;
     }
-    if (funcion) userFound.funcion = funcion;
+    if (funcion) {
+      camposCambiados.push("Función");
+      userFound.funcion = funcion;
+    }
 
     if (password) {
-      // await deleteImage(userFound.photo);
+      camposCambiados.push("Contraseña");
       userFound.password = await hashPassword(password);
     }
 
     await userFound.save();
-    // const response = await sendNotification(io, {
-    //   type: "SUBMODULE",
-    //   title: "Empleado actualizado",
-    //   message: "Se modificó un registro",
-    //   creatorId: _id,
-    //   submodule: {
-    //     name: "INVENTARIO",
-    //     module: "SISTEMAS",
-    //   },
-    // });
-
-    // console.log("Notification created:", response);
-
+    const stringCampos = camposCambiados.length > 0
+      ? `Campos modificados: ${camposCambiados.join(", ")}.`
+      : "Actualización general de credenciales.";
+    const findActualizador = actualizadoPor ? await Employee.findById(actualizadoPor) : null;
+    await NotificationService.send(io, {
+      type: "SUBMODULE",
+      title: `Perfil actualizado: ${userFound.name} ${userFound.lastname}`,
+      message: `El perfil de ${userFound.name} ${userFound.lastname} fue actualizado por ${findActualizador ? findActualizador.name + " " + findActualizador.lastname : "un administrador"}. ${stringCampos}`,
+      creator: {
+        id: actualizadoPor || actualizadoPor?._id,
+        model: "Employee"
+      },
+      scope: {
+        submoduleName: "COLABORADORES",
+        moduleName: "RECURSOS HUMANOS"
+      },
+      entity: {
+        id: userFound._id,
+        model: "Employee"
+      }
+    });
+    const roomName = `SUBMODULE_COLABORADORES`;
+    const clientsInRoom = io.sockets.adapter.rooms.get(roomName);
+    console.log(`🔍 Clientes en la sala ${roomName}:`, clientsInRoom ? [...clientsInRoom] : 0);
     return res.status(200).json({
       message: "Usuario actualizado correctamente",
     });

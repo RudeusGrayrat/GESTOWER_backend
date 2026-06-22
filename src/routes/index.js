@@ -60,7 +60,6 @@ const getWidgetEmployee = require("../controllers/Herramientas/Widgets/getWidget
 const updateWidgetPreference = require("../controllers/Herramientas/Widgets/updateWidgetPreference");
 const deleteSubmodule = require("../controllers/SubModules/deleteSubmodule");
 const deleteModule = require("../controllers/Modules/deleteModule");
-const getAllNotificaciones = require("../controllers/Herramientas/Notification/getNotification");
 const returnPdf = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/returnPdf");
 const getAllContratos = require("../controllers/AllModulos/Almacen/Contrato/getContrato");
 const postContratoAlmacen = require("../controllers/AllModulos/Almacen/Contrato/postContrato");
@@ -190,7 +189,6 @@ router.get("/getNavesAlmacen", getAllNavesAlmacen);
 router.get("/getAllMovimientosBySede", getAllMovimientosBySede);
 router.get("/getAllSedesAlmacen", getAllSedesAlmacen);
 router.get("/getAllContratoAlmacen", getAllContratos);
-router.get("/getAllNotificaciones", getAllNotificaciones);
 router.get("/getWidgetsPreference/:colaborador", getWidgetEmployee);
 router.get("/getAllWidgets", getAllWidgets);
 router.get("/getCertificados", getCertificados);
