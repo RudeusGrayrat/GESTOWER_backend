@@ -7,6 +7,7 @@ const { setupWorker } = require("@socket.io/sticky");
 const http = require("http");
 const socketIo = require("socket.io");
 const dotenv = require("dotenv");
+const cluster = require("cluster");
 dotenv.config();
 const routes = require("./routes/index");
 const verifyToken = require("./controllers/auth/midellware"); // Corrige si se escribe middleware
@@ -62,8 +63,14 @@ const io = socketIo(httpServer, {
 });
 
 // Compartir la instancia de IO con los controladores de Express
-io.adapter(createAdapter());
-setupWorker(io);
+if (cluster.isWorker) {
+  io.adapter(createAdapter());
+  setupWorker(io);
+  console.log("🚀 Socket.IO inicializado en Modo Cluster (Producción)");
+} else {
+  console.log("💻 Socket.IO inicializado en Modo Single/Local (Desarrollo)");
+}
+
 app.set("io", io);
 
 // 5. Arquitectura de Salas de Socket.IO (Soporte ERP + ManifesTower)
