@@ -12,6 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "@ilovepdf/ilovepdf-nodejs": "^0.3.0",
+    "@socket.io/cluster-adapter": "^0.3.0",
+    "@socket.io/sticky": "^1.0.4",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.3",
