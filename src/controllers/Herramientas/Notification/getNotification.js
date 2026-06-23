@@ -5,6 +5,7 @@ const UserExternal = require("../../../models/ManifesTower/UserExternal");
 const getMyNotifications = async (req, res) => {
   try {
     const { _id, typeUser, search, date } = req.query;
+    console.log(`🔍 Buscando notificaciones para usuario ${_id} de tipo ${typeUser} con search="${search}" y date="${date}"`);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -32,6 +33,9 @@ const getMyNotifications = async (req, res) => {
       };
     } else if (typeUser === "UserExternal") {
       const externo = await UserExternal.findById(_id).select("roles estado");
+      console.log(`Usuario externo encontrado: ${externo ? "Sí" : "No"}`);
+      console.log(`Roles del usuario externo: ${externo ? JSON.stringify(externo.roles) : "N/A"}`);
+      console.log("el externo es: ", externo);
       if (!externo) return res.status(404).json({ ok: false, message: "Usuario externo no encontrado." });
 
       roleFilter = { type: "INDIVIDUAL", receiver: _id, receiverModel: "UserExternal" };

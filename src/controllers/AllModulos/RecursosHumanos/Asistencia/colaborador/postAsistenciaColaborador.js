@@ -29,8 +29,8 @@ const updateAsistenciaGestower = async (req, res) => {
       fecha,
     }).populate("colaborador", "name lastname");
 
-    if (!findAsistenciaColaborador) {
-      return res.status(404).json({ message: "No se encontró esta asistencia" });
+    if (findAsistenciaColaborador) {
+      return res.status(404).json({ message: "Esta asistencia ya existe" });
     }
 
     const nombre = `${findAsistenciaColaborador.colaborador.name} ${findAsistenciaColaborador.colaborador.lastname}`;

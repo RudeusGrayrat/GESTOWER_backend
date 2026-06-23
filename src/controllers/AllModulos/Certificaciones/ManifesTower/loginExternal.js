@@ -3,6 +3,7 @@ const Generador = require("../../../../models/AllModulos/Certificacion/Generador
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 const bcrypt = require("bcrypt"); // Cambiado a 'bcrypt' para mantener consistencia con tus otros archivos
 const jwt = require("jsonwebtoken");
+const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
 const loginExternal = async (req, res) => {
     try {
@@ -38,33 +39,9 @@ const loginExternal = async (req, res) => {
             });
         }
 
-        // // 5. Mapeo del perfil operativo utilizando los IDs vinculados en la cuenta
-        // let profileData = null;
-        // if (typeUser === "GENERADOR") {
-        //     profileData = await Generador.findById(userAuth.generadorId);
-        // } else if (typeUser === "TRANSPORTISTA") {
-        //     profileData = await Transportista.findById(userAuth.transportistaId);
-        // }
-
-        // // Validamos si la empresa existe en el módulo operativo y su estado
-        // if (!profileData) {
-        //     return res.status(404).json({
-        //         message: `No se encontraron los datos operativos de la empresa como ${typeUser}`,
-        //         type: "Error"
-        //     });
-        // }
-
-        // if (profileData.estado === "INACTIVO" || profileData.estado === "SUSPENDIDO") {
-        //     return res.status(403).json({
-        //         message: `La empresa se encuentra actualmente con estado: ${profileData.estado}`,
-        //         type: "Error"
-        //     });
-        // }
-
-        // 6. Generación del Token firmado con el contexto dinámico del rol activo
         const token = jwt.sign(
             {
-                id: userAuth._id,
+                _id: userAuth._id,
                 ruc: userAuth.ruc,
                 role: "EXTERNAL",          // Identificador fijo para externos
                 activeRole: typeUser,      // El rol seleccionado en el Dropdown ("GENERADOR" o "TRANSPORTISTA")
@@ -83,6 +60,18 @@ const loginExternal = async (req, res) => {
             // profileId: profileData._id,
             // razonSocial: profileData.razonSocial
         });
+
+        await NotificationService.send(req.app.get("io"), {
+            type: "INDIVIDUAL",
+            title: "Inicio de Sesión Exitoso",
+            message: `Bienvenido ${userAuth.ruc}, ha iniciado sesión correctamente como ${typeUser}.`,
+            creator: { model: "UserExternal", id: userAuth._id },
+            scope: { receiverModel: "UserExternal", receiverId: userAuth._id }
+        });
+        const roomName = `ROLE_${typeUser.toUpperCase()}`;
+        const clientsInRoom = req.app.get("io").sockets.adapter.rooms.get(roomName);
+        console.log(`🔍 Clientes en la sala ${roomName}:`, clientsInRoom ? [...clientsInRoom] : 0);
+
         return res.status(200).json({
             message: "Ingreso correcto",
             type: "Correcto",
@@ -90,6 +79,7 @@ const loginExternal = async (req, res) => {
             user: {
                 ruc: userAuth.ruc,
                 rolActivo: typeUser,
+                _id: userAuth._id,
                 // profileId: profileData._id,
                 // razonSocial: profileData.razonSocial
             }
