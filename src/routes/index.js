@@ -33,7 +33,6 @@ const getAllPlantillasDeContrato = require("../controllers/AllModulos/RecursosHu
 const deletePlantillaContrato = require("../controllers/AllModulos/RecursosHumanos/PlantillasDeContrato/deletePlantillaContrato");
 const putPlantillaDeContrato = require("../controllers/AllModulos/RecursosHumanos/PlantillasDeContrato/putPlantillaDeContrato");
 const getAllAsistenciaColaborador = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/getAsistenciaColaborador");
-const postAsistenciaColaborador = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/postAsistenciaColaborador");
 const deleteAsistenciaColaborador = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/deleteAsistenciaColaborador");
 const getBoletaDePagos = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/getBoletaDePagos");
 const postBoletaDePagos = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/postBoletaDePagos");
@@ -104,6 +103,7 @@ const postAsistenciaApp = require("../controllers/AllModulos/RecursosHumanos/Asi
 const almacenLurinRouter = require("./Modulos/Almcen");
 const updateAsistenciaGestower = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/patchAsistenciaApp");
 const manifesTower = require("./Modulos/ManifesTower");
+const postAsistenciaGestower = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/postAsistenciaColaborador");
 
 const router = Router();
 
@@ -119,7 +119,7 @@ router.post("/createCotizacion", createCotizacion);
 router.post("/createContract", postContracts);
 router.post("/postPlantillasDeContrato", postPlantillasDeContrato);
 router.post("/postAsistenciaColaborador", postAsistenciaApp);
-router.post("/postAsistenciaErp", postAsistenciaColaborador);
+router.post("/postAsistenciaErp", postAsistenciaGestower);
 router.post("/postBoletaDePagos", postBoletaDePagos);
 router.post("/postDatosContables", postDatosContables);
 router.post("/enviarBoletasDePago", enviarBoleta);

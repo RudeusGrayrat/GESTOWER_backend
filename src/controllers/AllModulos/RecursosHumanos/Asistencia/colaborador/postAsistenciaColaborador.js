@@ -3,7 +3,7 @@ const dayjs = require("dayjs");
 const customParseFormat = require("dayjs/plugin/customParseFormat");
 dayjs.extend(customParseFormat);
 
-const updateAsistenciaGestower = async (req, res) => {
+const postAsistenciaGestower = async (req, res) => {
   const {
     colaborador,
     fecha,
@@ -15,93 +15,108 @@ const updateAsistenciaGestower = async (req, res) => {
     almuerzoSede,
     finAlmuerzo,
     finAlmuerzoSede,
-    estado,
+    estado = "FALTA", // Valor por defecto del body o "FALTA"
     observaciones,
   } = req.body;
 
   try {
-    if (!colaborador) {
-      return res.status(400).json({ message: "El colaborador es obligatorio" });
+    console.log("Datos recibidos para POST:", req.body);
+
+    // 1. Validaciones iniciales obligatorias
+    if (!colaborador || !fecha) {
+      return res.status(400).json({ message: "El colaborador y la fecha son obligatorios." });
     }
 
-    const findAsistenciaColaborador = await AsistenciaColaborador.findOne({
+    const fechaValida = dayjs(fecha, "DD/MM/YYYY", true); // Asegúrate de usar el formato correcto de tu app
+    if (!fechaValida.isValid()) {
+      return res.status(400).json({ message: "El formato de fecha es inválido. Use DD/MM/YYYY." });
+    }
+
+    // 2. Evitar duplicados para el mismo día
+    const existeAsistencia = await AsistenciaColaborador.findOne({ colaborador, fecha });
+    if (existeAsistencia) {
+      return res.status(400).json({ message: "Ya existe un registro de asistencia para este colaborador en la fecha indicada." });
+    }
+
+    // 3. Inicializar el objeto que guardaremos
+    let nuevaAsistenciaData = {
       colaborador,
       fecha,
-    }).populate("colaborador", "name lastname");
+      estado,
+      observaciones
+    };
 
-    if (findAsistenciaColaborador) {
-      return res.status(404).json({ message: "Esta asistencia ya existe" });
-    }
+    // 4. Flujo según el Estado de la Asistencia
+    const estadosAdministrativos = ["PERMISO", "VACACIONES", "FALTA"];
 
-    const nombre = `${findAsistenciaColaborador.colaborador.name} ${findAsistenciaColaborador.colaborador.lastname}`;
-
-    // Actualizar ingreso
-    if (ingreso) {
+    if (estadosAdministrativos.includes(estado)) {
+      // Si es permiso, vacaciones o falta, ignoramos horas y guardamos limpio
+      // (Opcional: puedes guardar sedes si aplica, si no, se queda solo con lo básico)
+    } else {
+      // Flujo Normal: PRESENTE o TARDANZA (Requiere procesar tiempos)
       let minTarde = 0;
-      let state;
-      const horaLimite = dayjs("08:00 AM", "hh:mm A");
-      const horaIngreso = dayjs(ingreso, "hh:mm A");
+      let minExtras = 0;
+      let estadoCalculado = estado;
 
-      if (horaIngreso.isAfter(horaLimite)) {
-        state = "TARDANZA";
-        minTarde = horaIngreso.diff(horaLimite, "minute");
-      } else {
-        state = "PRESENTE";
+      // --- Cálculo de Ingreso / Tardanza ---
+      if (ingreso) {
+        const horaLimite = dayjs("08:00 AM", "hh:mm A");
+        const horaIngreso = dayjs(ingreso, "hh:mm A");
+
+        if (horaIngreso.isAfter(horaLimite)) {
+          estadoCalculado = "TARDANZA";
+          minTarde = horaIngreso.diff(horaLimite, "minute");
+        } else {
+          estadoCalculado = "PRESENTE";
+        }
       }
 
-      findAsistenciaColaborador.ingreso = ingreso;
-      findAsistenciaColaborador.minTarde = minTarde;
-      findAsistenciaColaborador.estado = state;
-      if (ingresoSede) findAsistenciaColaborador.ingresoSede = ingresoSede;
-    }
-
-    // Actualizar salida
-    if (salida) {
-      let horasExtras = 0;
-      const fechaValida = dayjs(fecha, "DD/MM/YYYY", true);
-      if (!fechaValida.isValid()) {
-        return res.status(400).json({ message: "Fecha inválida" });
-      }
-
-      const diaSemana = fechaValida.day();
-      const horaSalidaNormal =
-        diaSemana === 6
+      // --- Cálculo de Salida / Horas Extra ---
+      if (salida) {
+        const diaSemana = fechaValida.day(); // 0 = Domingo, 6 = Sábado
+        // Sábados sale a la 1:00 PM, L-V a las 05:30 PM
+        const horaSalidaNormal = diaSemana === 6
           ? dayjs("01:00 PM", "hh:mm A")
           : dayjs("05:30 PM", "hh:mm A");
 
-      const horaLimiteTolerancia = horaSalidaNormal.add(5, "minute");
-      const horaSalida = dayjs(salida, "hh:mm A");
+        const horaLimiteTolerancia = horaSalidaNormal.add(5, "minute");
+        const horaSalida = dayjs(salida, "hh:mm A");
 
-      if (horaSalida.isAfter(horaLimiteTolerancia)) {
-        horasExtras = horaSalida.diff(horaSalidaNormal, "minute");
+        if (horaSalida.isAfter(horaLimiteTolerancia)) {
+          minExtras = horaSalida.diff(horaSalidaNormal, "minute");
+        }
       }
 
-      findAsistenciaColaborador.salida = salida;
-      findAsistenciaColaborador.minExtras = horasExtras;
-      if (salidaSede) findAsistenciaColaborador.salidaSede = salidaSede;
+      // Inyectar datos calculados y recibidos al payload de guardado
+      nuevaAsistenciaData = {
+        ...nuevaAsistenciaData,
+        estado: estadoCalculado,
+        ingreso,
+        ingresoSede,
+        salida,
+        salidaSede,
+        inicioAlmuerzo,
+        almuerzoSede,
+        finAlmuerzo,
+        finAlmuerzoSede,
+        minTarde,
+        minExtras
+      };
     }
 
-    // Actualizar almuerzo
-    if (inicioAlmuerzo) {
-      findAsistenciaColaborador.inicioAlmuerzo = inicioAlmuerzo;
-      if (almuerzoSede) findAsistenciaColaborador.almuerzoSede = almuerzoSede;
-    }
-    if (finAlmuerzo) {
-      findAsistenciaColaborador.finAlmuerzo = finAlmuerzo;
-      if (finAlmuerzoSede) findAsistenciaColaborador.finAlmuerzoSede = finAlmuerzoSede;
-    }
+    // 5. Guardar en la Base de Datos de manera limpia
+    const nuevaAsistencia = new AsistenciaColaborador(nuevaAsistenciaData);
+    await nuevaAsistencia.save();
 
-    if (colaborador) findAsistenciaColaborador.colaborador = colaborador;
-    if (fecha) findAsistenciaColaborador.fecha = fecha;
-    if (observaciones) findAsistenciaColaborador.observaciones = observaciones;
-    if (estado) findAsistenciaColaborador.estado = estado;
+    return res.status(201).json({
+      message: "Asistencia registrada correctamente",
+      data: nuevaAsistencia
+    });
 
-    await findAsistenciaColaborador.save();
-
-    return res.status(200).json({ message: `Asistencia de ${nombre} actualizada` });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.error("Error en postAsistenciaGestower:", error);
+    return res.status(500).json({ message: "Error interno del servidor", error: error.message });
   }
 };
 
-module.exports = updateAsistenciaGestower;
+module.exports = postAsistenciaGestower;

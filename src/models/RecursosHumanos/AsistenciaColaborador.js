@@ -14,7 +14,7 @@ const asistenciaColaboradorSchema = new Schema(
     },
     ingreso: {
       type: String,
-      required: true,
+      // required: true,
     },
     ingresoSede: {
       type: String,
