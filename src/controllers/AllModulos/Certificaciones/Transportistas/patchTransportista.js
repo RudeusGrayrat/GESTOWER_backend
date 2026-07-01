@@ -13,7 +13,7 @@ const patchTransportista = async (req, res) => {
             razonSocial, ruc, registroEors, autorizacionMunicipal, documentoRuta,
             direccion, ubigeoId, correoElectronico, telefono, representanteLegal,
             responsableTecnico, contingencias, responsables, generadores, conductores, estado,
-            usuarioManifestower, password // ⬅️ Parámetros de control de credenciales
+            usuarioManifestower, password 
         } = req.body;
         if (!transportistaId) {
             return res.status(400).json({ message: "El ID del transportista es requerido", type: "Error" });
@@ -139,6 +139,7 @@ const patchTransportista = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Error en patchTransportista:", error);
         // En caso de caída del servidor o base de datos, limpiamos las firmas subidas en esta iteración
         if (uploadedPublicIds.length > 0) {
             await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));

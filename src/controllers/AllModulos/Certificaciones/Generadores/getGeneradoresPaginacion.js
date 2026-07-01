@@ -24,16 +24,26 @@ const getGeneradorPagination = async (req, res) => {
                     .select("generadores")
                     .lean();
 
-                if (transportistaDoc && transportistaDoc.generadores && transportistaDoc.generadores.length > 0) {
-                    // Extraemos un arreglo puramente con los IDs de los generadores vinculados
-                    const generadoresVinculadosIds = transportistaDoc.generadores.map(g => g.generadorId);
+                // 1. Validamos que exista el documento y el array de generadores
+                if (transportistaDoc && transportistaDoc.generadores) {
 
-                    // Filtramos para que solo traiga los Generadores incluidos en esa lista
-                    query._id = { $in: generadoresVinculadosIds };
+                    // 2. Mapeamos defensivamente con Optional Chaining y filtramos nulos/undefined
+                    const generadoresVinculadosIds = transportistaDoc.generadores
+                        .map(g => g?.generadorId)
+                        .filter(Boolean); // Limpia cualquier null/undefined que rompa el flujo
+
+                    // 3. Verificamos si realmente nos quedaron IDs válidos para consultar
+                    if (generadoresVinculadosIds.length > 0) {
+                        // Si hay IDs limpios, filtramos por ellos
+                        query._id = { $in: generadoresVinculadosIds };
+                    } else {
+                        // Si el array estaba vacío de origen, o todos sus elementos eran null,
+                        // forzamos a que la consulta devuelva vacío de forma segura.
+                        query._id = null
+                    }
                 } else {
-                    // Si el transportista no tiene ningún generador vinculado, 
-                    // forzamos a que la consulta devuelva vacío inmediatamente (un ID que no existirá)
-                    query._id = new mongoose.Types.ObjectId();
+                    // Por si el documento del transportista ni siquiera tiene la propiedad 'generadores'
+                    query._id = null;
                 }
             }
         }
