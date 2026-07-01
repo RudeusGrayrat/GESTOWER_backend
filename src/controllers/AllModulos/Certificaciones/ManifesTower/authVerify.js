@@ -12,9 +12,8 @@ const ManifestVerifyToken = async (req, res) => {
     try {
         // 1. Verificar y decodificar el token
         const decoded = jwt.verify(token, JWT_SECRET);
-
         // 2. Buscar al usuario por su ID (el que guardaste en el token)
-        const userFound = await UserExternal.findById(decoded.id);
+        const userFound = await UserExternal.findById(decoded._id);
         if (!userFound) {
             return res.status(401).json({ message: "Usuario no encontrado" });
         }

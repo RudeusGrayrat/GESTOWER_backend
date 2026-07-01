@@ -61,17 +61,6 @@ const loginExternal = async (req, res) => {
             // razonSocial: profileData.razonSocial
         });
 
-        await NotificationService.send(req.app.get("io"), {
-            type: "INDIVIDUAL",
-            title: "Inicio de Sesión Exitoso",
-            message: `Bienvenido ${userAuth.ruc}, ha iniciado sesión correctamente como ${typeUser}.`,
-            creator: { model: "UserExternal", id: userAuth._id },
-            scope: { receiverModel: "UserExternal", receiverId: userAuth._id }
-        });
-        const roomName = `ROLE_${typeUser.toUpperCase()}`;
-        const clientsInRoom = req.app.get("io").sockets.adapter.rooms.get(roomName);
-        console.log(`🔍 Clientes en la sala ${roomName}:`, clientsInRoom ? [...clientsInRoom] : 0);
-
         return res.status(200).json({
             message: "Ingreso correcto",
             type: "Correcto",

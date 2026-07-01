@@ -17,6 +17,7 @@ const patchDestino = require("../../controllers/AllModulos/Certificaciones/Desti
 const generarPDFManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/generarPDFManifiesto");
 const patchManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/patchManifiesto");
 const importStockJson = require("../../controllers/AllModulos/Almacen/Stock/postStockJson");
+const getTransportistaById = require("../../controllers/AllModulos/Certificaciones/Transportistas/getTransportistaById");
 
 const certificacionesRouter = Router();
 
@@ -24,10 +25,11 @@ certificacionesRouter.get("/getGeneradoresPaginacion", getGeneradoresPaginacion)
 certificacionesRouter.get("/getManifiestosPaginacion", getManifiestosPaginacion);
 certificacionesRouter.get("/getGeneradoresByTransportista/:transportistaId", getGeneradoresByTransportista);
 certificacionesRouter.get("/getTransportistasPaginacion", getTransportistaPagination);
+certificacionesRouter.get("/getTransportistaById/:id", getTransportistaById);
 certificacionesRouter.get("/getDestinosPaginacion", getDestinoPagination);
 certificacionesRouter.get("/getUbigeoPaginacion", getUbigeoPagination);
 certificacionesRouter.get("/getpdfManifiesto/:id", generarPDFManifiesto);
-certificacionesRouter.get("/stockByJson", importStockJson );
+certificacionesRouter.get("/stockByJson", importStockJson);
 
 certificacionesRouter.post("/postGenerador", postGenerador);
 certificacionesRouter.post("/postManifiesto", postManifiesto);

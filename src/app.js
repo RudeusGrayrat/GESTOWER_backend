@@ -69,6 +69,7 @@ io.on("connection", (socket) => {
 
   socket.on("register_session", (data) => {
     const { userId, userType, submodules, roles } = data; // 👈 Agregamos roles externos
+    console.log(`📡 Registro de sesión en socket para usuarioId=${userId}, userType=${userType}, submodules=${submodules}, roles=${roles}`);
     if (!userId) return;
 
     // 1. Canal Individual único (Funciona para ambos sistemas)
@@ -89,6 +90,7 @@ io.on("connection", (socket) => {
 
     // 3. Canales para Usuarios Externos de ManifesTower (Por Roles)
     else if (userType === "UserExternal") {
+      console.log(`🚛 Usuario Externo ${userId} con roles: ${roles}`);
       if (Array.isArray(roles)) {
         roles.forEach((role) => {
           const roomName = `ROLE_${role.toUpperCase()}`; // Ej: ROLE_TRANSPORTISTA

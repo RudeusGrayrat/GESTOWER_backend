@@ -21,6 +21,9 @@ const notificationSchema = new mongoose.Schema(
       name: { type: String, uppercase: true },   // Ej: "MANIFIESTOS", "INVENTARIO"
       module: { type: String, uppercase: true }, // Ej: "OPERACIONES", "SISTEMAS"
     },
+    roleScope: {
+      roleName: { type: String, enum: ["TRANSPORTISTA", "GENERADOR"], uppercase: true }, // Ej: "TRANSPORTISTA", "GENERADOR"
+    },
 
     /* 💡 MEJORA 1: POLIMORFISMO MULTIRROL (refPath)
       Ya no estás amarrado solo a "Employee". Ahora puedes recibir e indicar creadores 

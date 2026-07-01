@@ -1,36 +1,50 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const vinculacionSchema = new mongoose.Schema({
-    generadorId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Generador',
-        required: true
+const vinculacionSchema = mongoose.Schema(
+    {
+        generadorId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Generador',
+            required: true
+        },
+        transportistaId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Transportista',
+            required: true
+        },
+        iniciadoPor: {
+            type: String,
+            enum: ['GENERADOR', 'TRANSPORTISTA'],
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ['PENDIENTE', 'ACEPTADA', 'RECHAZADA'],
+            default: 'PENDIENTE'
+        },
+        respondidoPor: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'UserExternal'
+        },
+        fechaRespuesta: {
+            type: Date
+        },
+        // 🌟 REVISAR ESTA LÍNEA EN TU ARCHIVO REAL: Debe existir para que se guarde el switch
+        tienePermisoLlenado: {
+            type: Boolean,
+            default: false
+        },
+        fechaDesvinculacion: {
+            type: Date,
+            default: null
+        },
+        desvinculadoPor: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'UserExternal',
+            default: null
+        }
     },
-    transportistaId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Transportista',
-        required: true
-    },
-    iniciadoPor: {
-        type: String,
-        enum: ['GENERADOR', 'TRANSPORTISTA'],
-        required: true
-    },
-    status: {
-        type: String,
-        enum: ['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'],
-        default: 'PENDIENTE'
-    },
-    fechaRespuesta: {
-        type: Date
-    },
-    respondidoPor: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'UserExternal' // Usuario que aceptó o rechazó
-    }
-}, { timestamps: true });
+    { timestamps: true }
+);
 
-vinculacionSchema.index({ generadorId: 1, transportistaId: 1 }, { unique: false });
-
-const Vinculacion = mongoose.model('Vinculacion', vinculacionSchema);
-module.exports = Vinculacion;
+module.exports = mongoose.model("Vinculacion", vinculacionSchema);

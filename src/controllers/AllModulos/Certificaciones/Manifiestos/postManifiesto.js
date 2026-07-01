@@ -97,7 +97,7 @@ const postManifiesto = async (req, res) => {
             referendoEntrega: referendoEntrega || { referendo: false },
             referendoRecepcion: referendoRecepcion || { referendo: false },
             otrasObligaciones: otrasObligaciones || {},
-            estado: estado || "PENDIENTE",
+            estado: estado || "BORRADOR",
             creadoPor: creadoPor || req.user?.id
         });
 
