@@ -1,4 +1,4 @@
-const { default: mongoose } = require("mongoose")
+const mongoose = require("mongoose")
 
 const manifiestoSchema = new mongoose.Schema(
     {
@@ -7,8 +7,16 @@ const manifiestoSchema = new mongoose.Schema(
         mes: { type: String, required: true },
         estado: {
             type: String,
-            enum: ["BORRADOR", "EN REVISION", "OBSERVADO", "APROBADO", "RECIBIDO", "RECHAZADO"],
-            default: "EN REVISION"
+            enum: [
+                "BORRADOR",
+                "PENDIENTE",
+                "ENVIADO",
+                "EN REVISION",
+                "OBSERVADO",
+                "APROBADO",
+                "RECHAZADO",
+            ],
+            default: "BORRADOR"
         },
         generadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Generador' },
         responsableGestion: {

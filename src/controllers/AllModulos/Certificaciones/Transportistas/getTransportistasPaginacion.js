@@ -1,33 +1,27 @@
-const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
+const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas.js");
 const Ubigeo = require("../../../../models/AllModulos/Certificacion/Ubigeo");
-// 1. 🌟 Importamos el modelo de usuarios para resolver el generadorId
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const escapeRegExp = require("../../../../utils/regex/regex.js");
 const mongoose = require("mongoose");
 
 const getTransportistaPagination = async (req, res) => {
     try {
-        // 2. 🌟 Recibimos 'usuario' desde los query params (req.query)
         const { page = 0, limit = 10, search = "", estado = "", usuario = "" } = req.query;
         const query = {};
 
-        // Filtro por estado básico
         if (estado) {
             query.estado = estado;
         }
 
-        // 3. 🌟 LÓGICA DE VINCULACIÓN GENERADOR -> TRANSPORTISTA
+        let cuentaUsuario = null;
         if (usuario && mongoose.Types.ObjectId.isValid(usuario)) {
-            const cuentaUsuario = await UserExternal.findById(usuario);
+            cuentaUsuario = await UserExternal.findById(usuario);
 
-            // Si el usuario existe y efectivamente tiene un rol de GENERADOR vinculado
             if (cuentaUsuario && cuentaUsuario.generadorId) {
-                // Filtramos para que solo traiga transportistas donde este generadorId esté en su lista
                 query["generadores.generadorId"] = cuentaUsuario.generadorId;
             }
         }
 
-        // Filtro por barra de búsqueda (Search)
         if (search) {
             const safeSearch = escapeRegExp(search);
             const regex = new RegExp(safeSearch, "i");
@@ -55,29 +49,42 @@ const getTransportistaPagination = async (req, res) => {
                 { "responsableTecnico.numeroColegiatura": regex },
                 { ubigeoId: { $in: ubigeosIds } }
             ];
-
-            if (!isNaN(search) && search.trim() !== '') {
-                query.$or.push({ ruc: parseInt(search) });
-            }
         }
 
-        // Ejecución de la consulta con paginación y poblaciones
-        const [data, total] = await Promise.all([
-            Transportista.find(query)
-                .skip(page * limit)
-                .limit(parseInt(limit))
-                .populate("ubigeoId")
-                .populate("generadores.generadorId") // 🌟 Recomendación: puebla los datos del generador si necesitas mostrarlos
-                .lean()
-                .sort({ createdAt: -1 }),
-            Transportista.countDocuments(query),
-        ]);
+        const skipRows = parseInt(page) * parseInt(limit);
+        const total = await Transportista.countDocuments(query);
+        const transportistas = await Transportista.find(query)
+            .skip(skipRows)
+            .limit(parseInt(limit))
+            .sort({ createdAt: -1 });
 
-        return res.json({ data, total });
+        // Aplanamos de manera inteligente el permiso de llenado exclusivo para este Generador antes de responder
+        const dataMapped = transportistas.map(t => {
+            const tObj = t.toObject();
+            if (cuentaUsuario && cuentaUsuario.generadorId) {
+                const relacion = tObj.generadores?.find(g =>
+                    g.generadorId.toString() === cuentaUsuario.generadorId.toString()
+                );
+                tObj.tienePermisoLlenado = relacion ? relacion.tienePermisoLlenado : false;
+            } else {
+                tObj.tienePermisoLlenado = false;
+            }
+            return tObj;
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: dataMapped,
+            total: total
+        });
+
     } catch (error) {
-        console.error("Error fetching transportistas with pagination:", error);
-        return res.status(500).json({ message: error.message || "Error al buscar transportistas" });
+        console.error("Error en getTransportistaPagination:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
     }
 };
 
-module.exports = getTransportistaPagination;
+module.exports = getTransportistaPagination

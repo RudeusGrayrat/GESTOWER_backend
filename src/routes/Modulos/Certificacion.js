@@ -18,6 +18,7 @@ const generarPDFManifiesto = require("../../controllers/AllModulos/Certificacion
 const patchManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/patchManifiesto");
 const importStockJson = require("../../controllers/AllModulos/Almacen/Stock/postStockJson");
 const getTransportistaById = require("../../controllers/AllModulos/Certificaciones/Transportistas/getTransportistaById");
+const verificarManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/verificarManifiesto");
 
 const certificacionesRouter = Router();
 
@@ -42,5 +43,6 @@ certificacionesRouter.patch("/editTransportista/:transportistaId", patchTranspor
 certificacionesRouter.patch("/editGenerador/:generadorId", patchGenerador)
 certificacionesRouter.patch("/editDestino/:destinoId", patchDestino)
 certificacionesRouter.patch("/patchManifiesto/:manifiestoId", patchManifiesto)
+certificacionesRouter.patch("/verificarManifiesto/:id", verificarManifiesto)
 
 module.exports = certificacionesRouter;

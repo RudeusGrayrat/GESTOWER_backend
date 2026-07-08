@@ -29,7 +29,6 @@ const vinculacionSchema = mongoose.Schema(
         fechaRespuesta: {
             type: Date
         },
-        // 🌟 REVISAR ESTA LÍNEA EN TU ARCHIVO REAL: Debe existir para que se guarde el switch
         tienePermisoLlenado: {
             type: Boolean,
             default: false

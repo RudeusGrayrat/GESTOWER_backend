@@ -1,3 +1,4 @@
+// controllers/manifesTower/patchVinculacion.js
 const Vinculacion = require("../../../../models/ManifesTower/Vinculacion");
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
@@ -5,9 +6,11 @@ const Transportista = require("../../../../models/AllModulos/Certificacion/Trans
 
 const patchVinculacion = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { accion, usuarioId, rolActivo, tienePermisoLlenado } = req.query;
+        const { id } = req.params; // Puede ser id de Vinculacion O id de Transportista (según la acción)
+        const { accion, usuarioId, rolActivo, tienePermisoLlenado, generadorId } = req.query;
         const io = req.app.get("io");
+
+        console.log("🚀 ~ patchVinculacion ~ req.query:", req.query);
 
         if (!usuarioId) {
             return res.status(400).json({ message: 'El ID del usuario que responde es requerido.', type: 'Alerta' });
@@ -19,17 +22,28 @@ const patchVinculacion = async (req, res) => {
         }
 
         const queryStatus = ['CANCELAR', 'TOGGLE_PERMISO'].includes(accion) ? 'ACEPTADA' : 'PENDIENTE';
-        const vinculacion = await Vinculacion.findOne({ _id: id, status: queryStatus });
+
+        // 🔍 BÚSQUEDA INTELIGENTE DEL DOCUMENTO DE VINCULACIÓN
+        let vinculacion;
+        if (accion === 'TOGGLE_PERMISO') {
+            // Desde la vista de Transportistas, 'id' de la URL es el del transportista.
+            // Buscamos la relación usando el par transportistaId + generadorId
+            const gId = generadorId;
+            if (!gId) {
+                return res.status(400).json({ message: 'El generadorId es requerido para cambiar permisos.', type: 'Alerta' });
+            }
+            vinculacion = await Vinculacion.findOne({ transportistaId: id, generadorId: gId, status: queryStatus });
+        } else {
+            // Desde la vista de Solicitudes, 'id' de la URL es el ID directo de la Vinculacion
+            vinculacion = await Vinculacion.findOne({ _id: id, status: queryStatus });
+        }
 
         if (!vinculacion) {
-            return res.status(404).json({ message: 'Solicitud no encontrada o ya procesada por la contraparte.', type: 'Alerta' });
+            return res.status(404).json({ message: 'Vínculo comercial no encontrado o no se encuentra activo.', type: 'Alerta' });
         }
 
         const permisoBool = tienePermisoLlenado === 'true' || tienePermisoLlenado === true;
 
-        // ==========================================
-        // CASO 1: ACEPTAR SOLICITUD
-        // ==========================================
         if (accion === 'ACEPTAR') {
             vinculacion.status = 'ACEPTADA';
             vinculacion.fechaRespuesta = new Date();
@@ -50,20 +64,14 @@ const patchVinculacion = async (req, res) => {
                 }
             });
 
-            // ==========================================
-            // CASO 2: RECHAZAR SOLICITUD
-            // ==========================================
         } else if (accion === 'RECHAZAR') {
             vinculacion.status = 'RECHAZADA';
             vinculacion.fechaRespuesta = new Date();
             vinculacion.respondidoPor = usuarioId;
             await vinculacion.save();
 
-            // ==========================================
-            // CASO 3: CANCELAR VINCULACIÓN
-            // ==========================================
         } else if (accion === 'CANCELAR') {
-            vinculacion.status = 'RECHAZADA'; // O el estado de historial que manejes para bajas
+            vinculacion.status = 'RECHAZADA';
             vinculacion.fechaRespuesta = new Date();
             vinculacion.respondidoPor = usuarioId;
             await vinculacion.save();
@@ -74,9 +82,6 @@ const patchVinculacion = async (req, res) => {
                 }
             });
 
-            // ==========================================
-            // CASO 4: SWITCH EN CALIENTE (MUTACIÓN DE PERMISO)
-            // ==========================================
         } else if (accion === 'TOGGLE_PERMISO') {
             if (rolActivo !== "GENERADOR") {
                 return res.status(403).json({
@@ -85,26 +90,24 @@ const patchVinculacion = async (req, res) => {
                 });
             }
 
+            // Actualizamos el flag en la tabla de relaciones intermedias (Vinculacion)
             vinculacion.tienePermisoLlenado = permisoBool;
             await vinculacion.save();
 
+            // Sincronizamos el arreglo embebido en la colección del Transportista
             await Transportista.updateOne(
                 { _id: vinculacion.transportistaId, "generadores.generadorId": vinculacion.generadorId },
                 { $set: { "generadores.$.tienePermisoLlenado": permisoBool } }
             );
         }
 
-        // ==========================================
-        // 🔔 🌟 SISTEMA DE NOTIFICACIONES DINÁMICO
-        // ==========================================
+        // --- Bloque de Notificaciones ---
         try {
-            // 1. Buscamos y poblamos al usuario que ejecuta la acción para saber quién es
             const usuarioRespondedor = await UserExternal.findById(usuarioId)
                 .populate("generadorId", "razonSocial ruc")
                 .populate("transportistaId", "razonSocial ruc");
 
             if (usuarioRespondedor) {
-                // Identificamos los datos fiscales de quien opera en el backend
                 const razonRespondedor = rolActivo === "GENERADOR"
                     ? usuarioRespondedor.generadorId?.razonSocial
                     : usuarioRespondedor.transportistaId?.razonSocial;
@@ -113,8 +116,6 @@ const patchVinculacion = async (req, res) => {
                     ? usuarioRespondedor.generadorId?.ruc
                     : usuarioRespondedor.transportistaId?.ruc;
 
-                // 2. Determinamos el usuario destino (la contraparte que debe recibir la alerta)
-                // Si el que operó es GENERADOR, le llega al TRANSPORTISTA, y viceversa.
                 const queryDestino = rolActivo === "GENERADOR"
                     ? { transportistaId: vinculacion.transportistaId, roles: "TRANSPORTISTA" }
                     : { generadorId: vinculacion.generadorId, roles: "GENERADOR" };
@@ -125,7 +126,6 @@ const patchVinculacion = async (req, res) => {
                     let title = "";
                     let message = "";
 
-                    // Construcción de strings personalizados según la acción real ejecutada
                     if (accion === 'ACEPTAR') {
                         title = "Solicitud de Vinculación Aceptada";
                         message = `Tu solicitud de vinculación de operaciones fue aceptada por la empresa: ${razonRespondedor} - RUC: ${rucRespondedor}. Ya pueden operar juntos.`;
@@ -140,34 +140,22 @@ const patchVinculacion = async (req, res) => {
                         message = `La empresa ${razonRespondedor} ha ${permisoBool ? 'CONCEDIDO' : 'REVOCADO'} el permiso para que gestiones de forma directa el llenado de Manifiestos con sus datos fiscales.`;
                     }
 
-                    // Si la acción requiere despacho de notificación, la enviamos
                     if (title && message) {
                         await NotificationService.send(io, {
                             type: "INDIVIDUAL",
                             title,
                             message,
-                            creator: {
-                                id: usuarioId,
-                                model: "UserExternal"
-                            },
-                            scope: {
-                                receiverModel: "UserExternal",
-                                receiverId: usuarioDestino._id
-                            },
-                            entity: {
-                                id: vinculacion._id,
-                                model: "Vinculacion"
-                            }
+                            creator: { id: usuarioId, model: "UserExternal" },
+                            scope: { receiverModel: "UserExternal", receiverId: usuarioDestino._id },
+                            entity: { id: vinculacion._id, model: "Vinculacion" }
                         });
                     }
                 }
             }
         } catch (notifError) {
-            // Un error en el servicio de sockets o grabado de notificaciones no debe romper la transacción exitosa de la DB principal
             console.error("⚠️ Error silencioso al despachar notificación en patchVinculacion:", notifError);
         }
 
-        // Retorno de respuesta HTTP exitosa
         return res.status(200).json({
             message: `Operación (${accion}) completada con éxito.`,
             type: 'Correcto',
