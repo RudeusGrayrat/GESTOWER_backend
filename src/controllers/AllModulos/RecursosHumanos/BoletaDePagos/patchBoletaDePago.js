@@ -4,6 +4,7 @@ const patchBoleDePago = async (req, res) => {
   const {
     _id,
     fechaBoletaDePago,
+    situacionEspecial,
     colaborador,
     envio,
     recepcion,
@@ -34,6 +35,7 @@ const patchBoleDePago = async (req, res) => {
       });
     }
     if (fechaBoletaDePago) boletaDePago.fechaBoletaDePago = fechaBoletaDePago;
+    if (situacionEspecial) boletaDePago.situacionEspecial = situacionEspecial;
     if (colaborador) boletaDePago.colaborador = colaborador;
     if (envio) boletaDePago.envio = envio;
     if (recepcion) boletaDePago.recepcion = recepcion;
@@ -54,7 +56,7 @@ const patchBoleDePago = async (req, res) => {
       boletaDePago,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message, type: "Error" });
   }
 };
 

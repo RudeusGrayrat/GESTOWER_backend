@@ -11,6 +11,22 @@ const boletaDePagosSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    situacionEspecial: {
+      type: String,
+      enum: [
+        "NINGUNA",
+        "TRABAJADOR DE DIRECCIÓN - PRESENCIAL",
+        "TRABAJADOR DE CONFIANZA - PRESENCIAL",
+        "TRABAJADOR DE DIRECCIÓN - TELETRABAJO MIXTO",
+        "TRABAJADOR DE CONFIANZA - TELETRABAJO MIXTO",
+        "TRABAJADOR DE DIRECCIÓN - TELETRABAJO COMPLETO",
+        "TRABAJADOR DE CONFIANZA - TELETRABAJO COMPLETO",
+        "TELETRABAJO MIXTO",
+        "TELETRABAJO COMPLETO"
+      ],
+      default: "NINGUNA",
+      required: true,
+    },
     colaborador: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Employee",
