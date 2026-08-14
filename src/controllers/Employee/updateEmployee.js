@@ -34,6 +34,7 @@ const updateEmployeePartial = async (req, res) => {
     funcion,
     regimenPension,
     codigoSpp,
+    situacionEspecial,
     asistenciaAutomatica,
     actualizadoPor,
   } = req.body;
@@ -150,6 +151,10 @@ const updateEmployeePartial = async (req, res) => {
       camposCambiados.push("Código SPP");
       userFound.codigoSpp = codigoSpp;
     }
+    if (situacionEspecial) {
+      camposCambiados.push("Situación Especial");
+      userFound.situacionEspecial = situacionEspecial;
+    } 
     if (asistenciaAutomatica) {
       camposCambiados.push("Asistencia Automática");
       userFound.asistenciaAutomatica = asistenciaAutomatica;

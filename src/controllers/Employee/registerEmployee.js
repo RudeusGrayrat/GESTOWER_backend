@@ -34,6 +34,7 @@ const registerEmployee = async (req, res) => {
       dateStart,
       regimenPension,
       codigoSpp,
+      situacionEspecial,
       asistenciaAutomatica,
     } = req.body;
 
@@ -81,6 +82,7 @@ const registerEmployee = async (req, res) => {
       dateStart,
       regimenPension,
       codigoSpp,
+      situacionEspecial,
       asistenciaAutomatica,
     });
 
