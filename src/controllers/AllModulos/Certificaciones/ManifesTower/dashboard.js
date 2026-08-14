@@ -6,37 +6,129 @@ const Vinculacion = require("../../../../models/ManifesTower/Vinculacion");
 
 const dashboardStats = async (req, res) => {
     try {
-        const { usuarioId, rolActivo } = req.query; // enviados desde el frontend
+        const { usuarioId, rolActivo } = req.query;
         if (!usuarioId) return res.status(400).json({ message: "usuarioId requerido" });
 
         let matchCond = {};
-        // Filtrar manifiestos según el rol del usuario
         if (rolActivo === "GENERADOR") {
-            // Buscar el generador asociado al usuario
             const user = await UserExternal.findById(usuarioId);
             if (user?.generadorId) {
                 matchCond.generadorId = user.generadorId;
             } else {
-                // Si no tiene generador, devolver datos vacíos
-                return res.json({ data: {} });
+                return res.json({ success: true, data: {} });
             }
         } else if (rolActivo === "TRANSPORTISTA") {
             const user = await UserExternal.findById(usuarioId);
             if (user?.transportistaId) {
                 matchCond.transportistaId = user.transportistaId;
             } else {
-                return res.json({ data: {} });
+                return res.json({ success: true, data: {} });
             }
         }
 
-        // 1. Total y estados
+        // ------------------------------
+        // 1. ESTADOS ACTUALES (Totales)
+        // ------------------------------
         const statsEstado = await Manifiesto.aggregate([
             { $match: matchCond },
             { $group: { _id: "$estado", count: { $sum: 1 } } }
         ]);
         const total = statsEstado.reduce((acc, cur) => acc + cur.count, 0);
 
-        // 2. Evolución mensual (últimos 6 meses)
+        // ------------------------------
+        // 2. HISTORIAL DIARIO POR ESTADO (ÚLTIMOS 6 DÍAS)
+        // ------------------------------
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const sixDaysAgo = new Date(today);
+        sixDaysAgo.setDate(sixDaysAgo.getDate() - 5); // 6 días incluyendo hoy
+
+        const historialRaw = await Manifiesto.aggregate([
+            {
+                $match: {
+                    ...matchCond,
+                    createdAt: { $gte: sixDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        estado: "$estado",
+                        dia: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id.dia": 1 } }
+        ]);
+
+        // Inicializar estructura de historiales
+        const estadosPosibles = ["APROBADO", "OBSERVADO", "RECHAZADO", "EN REVISION", "ENVIADO", "PENDIENTE", "BORRADOR"];
+        const historiales = {};
+        const fechas = [];
+
+        // Generar lista de fechas de los últimos 6 días
+        for (let i = 0; i < 6; i++) {
+            const d = new Date(sixDaysAgo);
+            d.setDate(d.getDate() + i);
+            fechas.push(d.toISOString().split('T')[0]);
+        }
+
+        // Inicializar arreglos vacíos para cada estado
+        estadosPosibles.forEach(est => {
+            historiales[est] = new Array(6).fill(0);
+        });
+
+        // Llenar con datos reales
+        historialRaw.forEach(item => {
+            const estado = item._id.estado;
+            const dia = item._id.dia;
+            const idx = fechas.indexOf(dia);
+            if (idx !== -1 && historiales[estado] !== undefined) {
+                historiales[estado][idx] = item.count;
+            }
+        });
+
+        // Calcular historial total (suma de todos los estados por día)
+        const historialTotal = fechas.map((_, idx) => {
+            let sum = 0;
+            estadosPosibles.forEach(est => {
+                sum += historiales[est]?.[idx] || 0;
+            });
+            return sum;
+        });
+
+        // ------------------------------
+        // 3. TENDENCIAS (Variación vs día anterior)
+        // ------------------------------
+        const tendencias = {};
+        estadosPosibles.forEach(est => {
+            const data = historiales[est];
+            if (data && data.length >= 2) {
+                const hoy = data[data.length - 1];
+                const ayer = data[data.length - 2];
+                const diff = hoy - ayer;
+                if (diff > 0) tendencias[est] = `+${diff} desde ayer`;
+                else if (diff < 0) tendencias[est] = `${diff} desde ayer`;
+                else tendencias[est] = "Sin cambios";
+            } else {
+                tendencias[est] = "Sin datos suficientes";
+            }
+        });
+
+        // Tendencia especial para el total general
+        if (historialTotal.length >= 2) {
+            const diffTotal = historialTotal[historialTotal.length - 1] - historialTotal[historialTotal.length - 2];
+            if (diffTotal > 0) tendencias.TOTAL = `+${diffTotal} desde ayer`;
+            else if (diffTotal < 0) tendencias.TOTAL = `${diffTotal} desde ayer`;
+            else tendencias.TOTAL = "Sin cambios";
+        } else {
+            tendencias.TOTAL = "Sin datos";
+        }
+
+        // ------------------------------
+        // 4. EVOLUCIÓN MENSUAL (últimos 6 meses)
+        // ------------------------------
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         const mensual = await Manifiesto.aggregate([
@@ -53,13 +145,14 @@ const dashboardStats = async (req, res) => {
             { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]);
 
-        // Formatear para el front (ej: "Ene", "Feb", ...)
         const meses = mensual.map(item => ({
             mes: new Date(item._id.year, item._id.month - 1).toLocaleString('es', { month: 'short' }),
             cantidad: item.count
         }));
 
-        // 3. Últimos 5 manifiestos
+        // ------------------------------
+        // 5. ÚLTIMOS 5 MANIFIESTOS
+        // ------------------------------
         const ultimos = await Manifiesto.find(matchCond)
             .sort({ createdAt: -1 })
             .limit(5)
@@ -67,10 +160,11 @@ const dashboardStats = async (req, res) => {
             .populate("transportistaId", "razonSocial")
             .lean();
 
-        // 4. Número de generadores/transportistas vinculados (según rol)
+        // ------------------------------
+        // 6. VINCULACIONES (contadores)
+        // ------------------------------
         let generadoresCount = 0, transportistasCount = 0;
         if (rolActivo === "GENERADOR") {
-            // Contar transportistas vinculados a este generador
             const user = await UserExternal.findById(usuarioId);
             if (user?.generadorId) {
                 const vinculos = await Vinculacion.find({
@@ -90,11 +184,9 @@ const dashboardStats = async (req, res) => {
             }
         }
 
-        // 5. Actividad reciente (puedes usar notificaciones o logs)
-        // Por simplicidad, puedes generar mensajes de los últimos cambios de estado
-        // o usar el sistema de notificaciones ya existente.
-        // Aquí se puede omitir o construir con los últimos eventos de los manifiestos.
-
+        // ------------------------------
+        // RESPUESTA FINAL
+        // ------------------------------
         res.json({
             success: true,
             data: {
@@ -109,7 +201,11 @@ const dashboardStats = async (req, res) => {
                     generador: m.generadorId?.razonSocial || "N/A",
                     estado: m.estado,
                     fecha: m.createdAt,
-                }))
+                })),
+                // 🔥 NUEVOS CAMPOS PARA TENDENCIAS E HISTORIALES
+                tendencias: tendencias,
+                historiales: historiales,
+                historialTotal: historialTotal,
             }
         });
 

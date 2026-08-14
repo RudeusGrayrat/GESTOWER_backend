@@ -51,26 +51,17 @@ const loginExternal = async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: "24h" }
         );
-        console.log(`Usuario ${userAuth.ruc} ha iniciado sesión como ${typeUser}`);
-        console.log("Payload del token:", {
-            id: userAuth._id,
-            ruc: userAuth.ruc,
-            role: "EXTERNAL",
-            activeRole: typeUser,
-            // profileId: profileData._id,
-            // razonSocial: profileData.razonSocial
-        });
 
         return res.status(200).json({
             message: "Ingreso correcto",
             type: "Correcto",
             token,
             user: {
+                ...userAuth.toObject(),
+                password: undefined,
                 ruc: userAuth.ruc,
                 rolActivo: typeUser,
                 _id: userAuth._id,
-                // profileId: profileData._id,
-                // razonSocial: profileData.razonSocial
             }
         });
 

@@ -8,6 +8,7 @@ const desvinculation = require("../../controllers/AllModulos/Certificaciones/Man
 const enviarManifiesto = require("../../controllers/AllModulos/Certificaciones/ManifesTower/envioManifiesto");
 const aprobarManifiestoGenerador = require("../../controllers/AllModulos/Certificaciones/ManifesTower/approveFirma");
 const dashboardStats = require("../../controllers/AllModulos/Certificaciones/ManifesTower/dashboard");
+const patchUserExternal = require("../../controllers/AllModulos/Certificaciones/ManifesTower/patchUser");
 
 const manifesTower = Router();
 
@@ -20,6 +21,7 @@ manifesTower.get("/dashboardStats", dashboardStats);
 manifesTower.patch("/patchVinculacion/:id", patchVinculacion);
 manifesTower.patch("/desvinculacion", desvinculation);
 manifesTower.patch("/aprobarManifiestoGenerador/:id", aprobarManifiestoGenerador);
+manifesTower.patch("/patchUserExternal", patchUserExternal)
 
 manifesTower.post("/postVinculacion", postVinvulacion)
 manifesTower.post("/enviarManifiesto/:id", enviarManifiesto)
