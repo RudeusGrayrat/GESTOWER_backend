@@ -1,6 +1,7 @@
 const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
 const Business = require("../../../../models/RecursosHumanos/Business");
 const generarCorrelativa = require("./correlativa");
+const normalizarConceptosBoleta = require("./normalizarConceptosBoleta");
 
 const postBoletaDePagos = async (req, res) => {
   const {
@@ -55,6 +56,11 @@ const postBoletaDePagos = async (req, res) => {
     const findBusiness = await Business.findOne({ razonSocial: business });
     if (!findBusiness)
       return res.status(400).json({ message: "No se encontró la empresa del colaborador" });
+    const conceptosBoleta = await normalizarConceptosBoleta({
+      remuneraciones,
+      descuentosAlTrabajador,
+      aportacionesDelEmpleador,
+    });
 
     const boleta = new BoletaDePagos({
       correlativa,
@@ -67,9 +73,9 @@ const postBoletaDePagos = async (req, res) => {
       diasSubsidiados,
       horasTrabajadas,
       diasNoLaborales,
-      remuneraciones,
-      descuentosAlTrabajador,
-      aportacionesDelEmpleador,
+      remuneraciones: conceptosBoleta.remuneraciones,
+      descuentosAlTrabajador: conceptosBoleta.descuentosAlTrabajador,
+      aportacionesDelEmpleador: conceptosBoleta.aportacionesDelEmpleador,
     });
     await boleta.save();
     return res.status(201).json({ message: "Boleta de pagos creada" });

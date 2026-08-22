@@ -1,4 +1,5 @@
 const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
+const mongoose = require("mongoose");
 
 const getBoletaDePagos = async (req, res) => {
   const { desde, hasta, empresa } = req.query;

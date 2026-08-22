@@ -60,6 +60,13 @@ const boletaDePagosSchema = mongoose.Schema(
           type: String,
           ref: "DatosContables",
         },
+        concepto: {
+          type: String,
+        },
+        conceptoPersonalizado: {
+          type: Boolean,
+          default: false,
+        },
         monto: {
           type: String,
           required: true,
@@ -73,6 +80,13 @@ const boletaDePagosSchema = mongoose.Schema(
           type: String,
           ref: "DatosContables",
         },
+        concepto: {
+          type: String,
+        },
+        conceptoPersonalizado: {
+          type: Boolean,
+          default: false,
+        },
         monto: {
           type: String,
           required: true,
@@ -85,6 +99,13 @@ const boletaDePagosSchema = mongoose.Schema(
         datosContables: {
           type: String,
           ref: "DatosContables",
+        },
+        concepto: {
+          type: String,
+        },
+        conceptoPersonalizado: {
+          type: Boolean,
+          default: false,
         },
         monto: {
           type: String,

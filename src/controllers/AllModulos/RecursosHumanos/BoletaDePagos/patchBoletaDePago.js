@@ -1,4 +1,5 @@
 const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
+const normalizarConceptosBoleta = require("./normalizarConceptosBoleta");
 
 const patchBoleDePago = async (req, res) => {
   const {
@@ -42,11 +43,18 @@ const patchBoleDePago = async (req, res) => {
     if (diasSubsidiados) boletaDePago.diasSubsidiados = diasSubsidiados;
     if (horasTrabajadas) boletaDePago.horasTrabajadas = horasTrabajadas;
     if (diasNoLaborales) boletaDePago.diasNoLaborales = diasNoLaborales;
-    if (remuneraciones) boletaDePago.remuneraciones = remuneraciones;
+    const conceptosBoleta = await normalizarConceptosBoleta({
+      remuneraciones: remuneraciones || boletaDePago.remuneraciones,
+      descuentosAlTrabajador:
+        descuentosAlTrabajador || boletaDePago.descuentosAlTrabajador,
+      aportacionesDelEmpleador:
+        aportacionesDelEmpleador || boletaDePago.aportacionesDelEmpleador,
+    });
+    if (remuneraciones) boletaDePago.remuneraciones = conceptosBoleta.remuneraciones;
     if (descuentosAlTrabajador)
-      boletaDePago.descuentosAlTrabajador = descuentosAlTrabajador;
+      boletaDePago.descuentosAlTrabajador = conceptosBoleta.descuentosAlTrabajador;
     if (aportacionesDelEmpleador)
-      boletaDePago.aportacionesDelEmpleador = aportacionesDelEmpleador;
+      boletaDePago.aportacionesDelEmpleador = conceptosBoleta.aportacionesDelEmpleador;
     await boletaDePago.save();
 
     return res.status(200).json({
