@@ -60,6 +60,7 @@ const postBoletaDePagos = async (req, res) => {
       correlativa,
       fechaBoletaDePago,
       colaborador: idColaborador,
+      situacionEspecial: colaborador?.situacionEspecial,
       empresaColaborador: findBusiness._id,
       fechaIngresoColaborador: colaborador?.dateStart,
       diasTrabajados,

@@ -20,6 +20,9 @@ const boletaDePagosSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Business",
     },
+    situacionEspecial: {
+      type: String,
+    },
     fechaIngresoColaborador: {
       type: String,
     },
