@@ -11,6 +11,7 @@ const updateEmployeePartial = async (req, res) => {
     typeDocument,
     documentNumber,
     type,
+    tipoTrabajador,
     state,
     dateOfBirth,
     dateStart,
@@ -35,6 +36,9 @@ const updateEmployeePartial = async (req, res) => {
     regimenPension,
     codigoSpp,
     situacionEspecial,
+    tipoSuspensionLaboral,
+    motivoSuspensionLaboral,
+    diasSuspensionLaboral,
     asistenciaAutomatica,
     actualizadoPor,
   } = req.body;
@@ -70,6 +74,10 @@ const updateEmployeePartial = async (req, res) => {
     if (type) {
       camposCambiados.push("Tipo");
       userFound.type = type;
+    }
+    if (tipoTrabajador) {
+      camposCambiados.push("Tipo de Trabajador");
+      userFound.tipoTrabajador = tipoTrabajador;
     }
     if (state) {
       camposCambiados.push("Estado");
@@ -155,6 +163,18 @@ const updateEmployeePartial = async (req, res) => {
       camposCambiados.push("Situación Especial");
       userFound.situacionEspecial = situacionEspecial;
     } 
+    if (tipoSuspensionLaboral !== undefined) {
+      camposCambiados.push("Tipo de Suspensión Laboral");
+      userFound.tipoSuspensionLaboral = tipoSuspensionLaboral;
+    }
+    if (motivoSuspensionLaboral !== undefined) {
+      camposCambiados.push("Motivo de Suspensión Laboral");
+      userFound.motivoSuspensionLaboral = motivoSuspensionLaboral;
+    }
+    if (diasSuspensionLaboral !== undefined) {
+      camposCambiados.push("Días de Suspensión Laboral");
+      userFound.diasSuspensionLaboral = diasSuspensionLaboral;
+    }
     if (asistenciaAutomatica) {
       camposCambiados.push("Asistencia Automática");
       userFound.asistenciaAutomatica = asistenciaAutomatica;

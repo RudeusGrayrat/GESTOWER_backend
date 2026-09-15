@@ -23,6 +23,25 @@ const boletaDePagosSchema = mongoose.Schema(
     situacionEspecial: {
       type: String,
     },
+    tipoTrabajador: {
+      type: String,
+      default: "Empleado",
+    },
+    situacionTrabajador: {
+      type: String,
+    },
+    tipoSuspensionLaboral: {
+      type: String,
+      default: "NINGUNA",
+    },
+    motivoSuspensionLaboral: {
+      type: String,
+      default: "NINGUNA",
+    },
+    diasSuspensionLaboral: {
+      type: String,
+      default: "0",
+    },
     fechaIngresoColaborador: {
       type: String,
     },

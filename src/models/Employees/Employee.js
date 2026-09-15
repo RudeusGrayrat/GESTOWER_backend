@@ -1,6 +1,41 @@
 const mongoose = require("mongoose");
 const locationSchema = require("./LocationSchema");
 
+const tipoTrabajadorOptions = [
+  "Ejecutivo",
+  "Obrero",
+  "Empleado",
+  "Trabajador Portuario",
+  "Practicante Senati",
+  "Pensionista O Cesante",
+  "Pensionista - Ley 28320",
+  "Construcción Civil",
+  "Piloto Y Copiloto De Avia. Com.",
+  "Marítimo, Fluvial O Lacustre",
+  "Periodista",
+  "Trab. De La Industria De Cuero",
+  "Minero De Mina De Socavón",
+  "Pescador - Ley 28320",
+  "Minero De Tajo Abierto",
+  "Minero De Industria Minera Metalúrgica",
+  "Artista - Ley Del Artista - Ley 28131",
+  "Agrario Dependiente - Ley 27360",
+  "Trabajador Actividad Acuícola . Ley 27460",
+  "Pescador Y Procesador Artesanal Independiente",
+  "Reg. Especial D. Leg.1057",
+  "Trabajador De La Microempresa Afiliado Al Sis",
+  "Conductor De La Microempresa Afiliado Al Sis",
+  "Conductor De La Microempresa - Seguro Regular",
+  "Funcionario Público",
+  "Empleado De Confianza",
+  "Servidor Público - Directivo  Superior",
+  "Servidor Público - Ejecutivo",
+  "Servidor Público - Especialista",
+  "Servidor Público - De Apoyo",
+  "Personal De La Administración Pública - Asignación Especial - D.U. 126-2001",
+  "Persona Que Genera Ingresos De Cuarta - Quinta Categoría",
+];
+
 const employeeSchema = mongoose.Schema(
   {
     name: {
@@ -25,6 +60,11 @@ const employeeSchema = mongoose.Schema(
       required: true,
       enum: ["VISITANTE", "COLABORADOR"],
       default: "COLABORADOR",
+    },
+    tipoTrabajador: {
+      type: String,
+      enum: tipoTrabajadorOptions,
+      default: "Empleado",
     },
     state: {
       type: String,
@@ -110,6 +150,19 @@ const employeeSchema = mongoose.Schema(
       ],
       default: "NINGUNA",
       required: true,
+    },
+    tipoSuspensionLaboral: {
+      type: String,
+      enum: ["NINGUNA", "S.P.", "S.I."],
+      default: "NINGUNA",
+    },
+    motivoSuspensionLaboral: {
+      type: String,
+      default: "NINGUNA",
+    },
+    diasSuspensionLaboral: {
+      type: String,
+      default: "0",
     },
     asistenciaAutomatica: {
       type: String,

@@ -11,6 +11,11 @@ const postBoletaDePagos = async (req, res) => {
     diasSubsidiados,
     horasTrabajadas,
     diasNoLaborales,
+    tipoSuspensionLaboral,
+    motivoSuspensionLaboral,
+    diasSuspensionLaboral,
+    situacionTrabajador,
+    tipoTrabajador,
     remuneraciones,
     descuentosAlTrabajador,
     aportacionesDelEmpleador,
@@ -67,6 +72,18 @@ const postBoletaDePagos = async (req, res) => {
       fechaBoletaDePago,
       colaborador: idColaborador,
       situacionEspecial: colaborador?.situacionEspecial,
+      tipoTrabajador: tipoTrabajador || colaborador?.tipoTrabajador || "Empleado",
+      situacionTrabajador: situacionTrabajador || colaborador?.state,
+      tipoSuspensionLaboral:
+        tipoSuspensionLaboral ||
+        colaborador?.tipoSuspensionLaboral ||
+        "NINGUNA",
+      motivoSuspensionLaboral:
+        motivoSuspensionLaboral ||
+        colaborador?.motivoSuspensionLaboral ||
+        "NINGUNA",
+      diasSuspensionLaboral:
+        diasSuspensionLaboral || colaborador?.diasSuspensionLaboral || "0",
       empresaColaborador: findBusiness._id,
       fechaIngresoColaborador: colaborador?.dateStart,
       diasTrabajados,

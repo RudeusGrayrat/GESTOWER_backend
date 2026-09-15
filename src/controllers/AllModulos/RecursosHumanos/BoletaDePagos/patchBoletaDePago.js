@@ -1,5 +1,7 @@
 const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
 const normalizarConceptosBoleta = require("./normalizarConceptosBoleta");
+const Employee = require("../../../../models/Employees/Employee");
+const Business = require("../../../../models/RecursosHumanos/Business");
 
 const patchBoleDePago = async (req, res) => {
   const {
@@ -13,6 +15,11 @@ const patchBoleDePago = async (req, res) => {
     diasSubsidiados,
     horasTrabajadas,
     diasNoLaborales,
+    tipoSuspensionLaboral,
+    motivoSuspensionLaboral,
+    diasSuspensionLaboral,
+    situacionTrabajador,
+    tipoTrabajador,
     remuneraciones,
     descuentosAlTrabajador,
     aportacionesDelEmpleador,
@@ -35,7 +42,28 @@ const patchBoleDePago = async (req, res) => {
       });
     }
     if (fechaBoletaDePago) boletaDePago.fechaBoletaDePago = fechaBoletaDePago;
-    if (colaborador) boletaDePago.colaborador = colaborador;
+    if (colaborador) {
+      const colaboradorActualizado = await Employee.findById(colaborador);
+      if (!colaboradorActualizado) {
+        return res.status(400).json({ message: "Colaborador no encontrado" });
+      }
+      const empresaActualizada = await Business.findOne({
+        razonSocial: colaboradorActualizado.business,
+      });
+
+      boletaDePago.colaborador = colaborador;
+      boletaDePago.situacionEspecial = colaboradorActualizado.situacionEspecial;
+      boletaDePago.tipoTrabajador = colaboradorActualizado.tipoTrabajador || "Empleado";
+      boletaDePago.situacionTrabajador = colaboradorActualizado.state;
+      boletaDePago.fechaIngresoColaborador = colaboradorActualizado.dateStart;
+      boletaDePago.tipoSuspensionLaboral =
+        colaboradorActualizado.tipoSuspensionLaboral || "NINGUNA";
+      boletaDePago.motivoSuspensionLaboral =
+        colaboradorActualizado.motivoSuspensionLaboral;
+      boletaDePago.diasSuspensionLaboral =
+        colaboradorActualizado.diasSuspensionLaboral || "0";
+      if (empresaActualizada) boletaDePago.empresaColaborador = empresaActualizada._id;
+    }
     if (envio) boletaDePago.envio = envio;
     if (recepcion) boletaDePago.recepcion = recepcion;
     if (state) boletaDePago.state = state;
@@ -43,6 +71,16 @@ const patchBoleDePago = async (req, res) => {
     if (diasSubsidiados) boletaDePago.diasSubsidiados = diasSubsidiados;
     if (horasTrabajadas) boletaDePago.horasTrabajadas = horasTrabajadas;
     if (diasNoLaborales) boletaDePago.diasNoLaborales = diasNoLaborales;
+    if (tipoSuspensionLaboral !== undefined)
+      boletaDePago.tipoSuspensionLaboral = tipoSuspensionLaboral;
+    if (motivoSuspensionLaboral !== undefined)
+      boletaDePago.motivoSuspensionLaboral = motivoSuspensionLaboral;
+    if (diasSuspensionLaboral !== undefined)
+      boletaDePago.diasSuspensionLaboral = diasSuspensionLaboral;
+    if (situacionTrabajador !== undefined)
+      boletaDePago.situacionTrabajador = situacionTrabajador;
+    if (tipoTrabajador !== undefined)
+      boletaDePago.tipoTrabajador = tipoTrabajador;
     const conceptosBoleta = await normalizarConceptosBoleta({
       remuneraciones: remuneraciones || boletaDePago.remuneraciones,
       descuentosAlTrabajador:
