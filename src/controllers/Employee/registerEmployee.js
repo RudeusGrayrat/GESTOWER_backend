@@ -36,9 +36,6 @@ const registerEmployee = async (req, res) => {
       regimenPension,
       codigoSpp,
       situacionEspecial,
-      tipoSuspensionLaboral,
-      motivoSuspensionLaboral,
-      diasSuspensionLaboral,
       asistenciaAutomatica,
     } = req.body;
 
@@ -88,9 +85,6 @@ const registerEmployee = async (req, res) => {
       regimenPension,
       codigoSpp,
       situacionEspecial,
-      tipoSuspensionLaboral,
-      motivoSuspensionLaboral,
-      diasSuspensionLaboral,
       asistenciaAutomatica,
     });
 

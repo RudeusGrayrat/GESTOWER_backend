@@ -151,19 +151,6 @@ const employeeSchema = mongoose.Schema(
       default: "NINGUNA",
       required: true,
     },
-    tipoSuspensionLaboral: {
-      type: String,
-      enum: ["NINGUNA", "S.P.", "S.I."],
-      default: "NINGUNA",
-    },
-    motivoSuspensionLaboral: {
-      type: String,
-      default: "NINGUNA",
-    },
-    diasSuspensionLaboral: {
-      type: String,
-      default: "0",
-    },
     asistenciaAutomatica: {
       type: String,
       enum: ["SI", "NO"],

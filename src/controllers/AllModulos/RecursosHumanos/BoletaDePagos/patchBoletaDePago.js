@@ -15,9 +15,7 @@ const patchBoleDePago = async (req, res) => {
     diasSubsidiados,
     horasTrabajadas,
     diasNoLaborales,
-    tipoSuspensionLaboral,
-    motivoSuspensionLaboral,
-    diasSuspensionLaboral,
+    suspensionesLaborales,
     situacionTrabajador,
     tipoTrabajador,
     remuneraciones,
@@ -56,12 +54,6 @@ const patchBoleDePago = async (req, res) => {
       boletaDePago.tipoTrabajador = colaboradorActualizado.tipoTrabajador || "Empleado";
       boletaDePago.situacionTrabajador = colaboradorActualizado.state;
       boletaDePago.fechaIngresoColaborador = colaboradorActualizado.dateStart;
-      boletaDePago.tipoSuspensionLaboral =
-        colaboradorActualizado.tipoSuspensionLaboral || "NINGUNA";
-      boletaDePago.motivoSuspensionLaboral =
-        colaboradorActualizado.motivoSuspensionLaboral;
-      boletaDePago.diasSuspensionLaboral =
-        colaboradorActualizado.diasSuspensionLaboral || "0";
       if (empresaActualizada) boletaDePago.empresaColaborador = empresaActualizada._id;
     }
     if (envio) boletaDePago.envio = envio;
@@ -71,12 +63,8 @@ const patchBoleDePago = async (req, res) => {
     if (diasSubsidiados) boletaDePago.diasSubsidiados = diasSubsidiados;
     if (horasTrabajadas) boletaDePago.horasTrabajadas = horasTrabajadas;
     if (diasNoLaborales) boletaDePago.diasNoLaborales = diasNoLaborales;
-    if (tipoSuspensionLaboral !== undefined)
-      boletaDePago.tipoSuspensionLaboral = tipoSuspensionLaboral;
-    if (motivoSuspensionLaboral !== undefined)
-      boletaDePago.motivoSuspensionLaboral = motivoSuspensionLaboral;
-    if (diasSuspensionLaboral !== undefined)
-      boletaDePago.diasSuspensionLaboral = diasSuspensionLaboral;
+    if (suspensionesLaborales !== undefined)
+      boletaDePago.suspensionesLaborales = suspensionesLaborales;
     if (situacionTrabajador !== undefined)
       boletaDePago.situacionTrabajador = situacionTrabajador;
     if (tipoTrabajador !== undefined)
