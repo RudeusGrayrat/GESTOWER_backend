@@ -5,6 +5,11 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 
+const IMAGEN_TRANSPARENTE = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLkNwAAAABJRU5ErkJggg==",
+    "base64"
+);
+
 const convertDocx = async (predata, templatePath) => {
     try {
         console.time("⏱️ Tiempo convertDocx");
@@ -14,6 +19,9 @@ const convertDocx = async (predata, templatePath) => {
         const imageOptions = {
             centered: false,
             getImage: async (tagValue) => {
+                // Logo y firma son opcionales: se conserva el espacio de la plantilla vacío.
+                if (!tagValue) return IMAGEN_TRANSPARENTE;
+
                 // CASO 1: URL externa
                 if (tagValue.startsWith("http")) {
                     const response = await axios.get(tagValue, { responseType: "arraybuffer" });
