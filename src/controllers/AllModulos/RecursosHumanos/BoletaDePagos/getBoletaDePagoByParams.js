@@ -81,7 +81,8 @@ const getBoletaDePagoByParams = async (req, res) => {
     const [data, total] = await Promise.all([
       BoletaDePagos.find(query)
         .populate("colaborador")
-        .populate("empresaColaborador", "ruc razonSocial")
+        // La vista previa usa logo y firma de la empresa para completar la plantilla.
+        .populate("empresaColaborador", "ruc razonSocial logo representative")
         .skip(page * limit)
         .limit(limit)
         .sort({ correlativa: -1 })
