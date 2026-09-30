@@ -5,6 +5,7 @@ const path = require("path");
 const Contract = require("../../models/Contracts");
 const PlantillasDeContrato = require("../../models/RecursosHumanos/PlantillasDeContrato");
 const axios = require("axios");
+const obtenerPlantillaLocal = require("../../utils/obtenerPlantillaLocal");
 
 // Ruta para procesar una plantilla
 const Pdf = async (req, res) => {
@@ -16,14 +17,17 @@ const Pdf = async (req, res) => {
       return res.status(404).send("Contrato no encontrado");
     }
 
+    const plantillaLocal = await obtenerPlantillaLocal({
+      tipo: "CONTRATO",
+      tipoContrato: datosDelContrato.typeContract,
+    });
     const planillaOfContract = await PlantillasDeContrato.findOne({
       tipoContrato: datosDelContrato.typeContract,
     });
-    if (!planillaOfContract) {
+    if (!plantillaLocal && !planillaOfContract) {
       return res.status(404).send("Plantilla no encontrada");
     }
 
-    const url = planillaOfContract.archivo;
     const data = {
       empresa_razon_social: datosDelContrato.razonSocial,
       empresa_ruc: datosDelContrato.ruc,
@@ -36,13 +40,9 @@ const Pdf = async (req, res) => {
       sueldo: datosDelContrato.colaborator.sueldo,
     };
 
-    // Descargar la plantilla desde Cloudinary
-    const response = await axios.get(url, {
-      responseType: "arraybuffer",
-    });
-
-    // Leer la plantilla
-    const content = Buffer.from(response.data, "binary");
+    const content = plantillaLocal
+      ? fs.readFileSync(plantillaLocal.ruta, "binary")
+      : Buffer.from((await axios.get(planillaOfContract.archivo, { responseType: "arraybuffer" })).data, "binary");
     const zip = new PizZip(content);
 
     // Configurar docxtemplater

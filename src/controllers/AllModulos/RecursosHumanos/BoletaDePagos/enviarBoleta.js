@@ -24,6 +24,7 @@ const timezone = require("dayjs/plugin/timezone");
 const convertDocx = require("../../../../utils/convertDocx");
 const path = require("path");
 const convertToPdf = require("../../../../utils/convertToPdf");
+const obtenerPlantillaLocal = require("../../../../utils/obtenerPlantillaLocal");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -82,9 +83,11 @@ const enviarBoleta = async (req, res) => {
       PORT = 587;
       NOMBRE_PLANTILLA = "BOLETA_TOWER_DOCX.docx";
     }
-    const templatePath = path.join(rootPath, "templates", NOMBRE_PLANTILLA);
+    const plantillaGlobal = await obtenerPlantillaLocal({ tipo: "BOLETA" });
+    // Mantiene el envío operativo hasta que se cargue la primera plantilla global.
+    const templatePath = plantillaGlobal?.ruta || path.join(rootPath, "templates", NOMBRE_PLANTILLA);
     console.log("EMPRESA:", business);
-    console.log("NOMBRE PLANTILLA:", NOMBRE_PLANTILLA);
+    console.log("PLANTILLA BOLETA:", plantillaGlobal?.plantilla.nombre || NOMBRE_PLANTILLA);
     const transporter = nodemailer.createTransport({
       host: SMTP,
       port: PORT,

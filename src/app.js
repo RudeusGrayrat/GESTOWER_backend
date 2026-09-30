@@ -1,6 +1,7 @@
 const express = require("express");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
+const path = require("path");
 const fileUpload = require("express-fileupload");
 const http = require("http");
 const socketIo = require("socket.io");
@@ -25,6 +26,8 @@ app.use(morgan("dev"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
+// Archivos administrados por el sistema: plantillas y recursos locales.
+app.use("/api/uploads", express.static(path.join(process.cwd(), "storage")));
 
 // 2. Control de CORS Limpio (Sin interferir con la autenticación)
 app.use((req, res, next) => {
