@@ -19,15 +19,20 @@ const allowedOrigins = [
 ];
 
 const app = express();
+const legacyFileUpload = fileUpload();
 
 // 1. Middlewares Base
-app.use(fileUpload());
+app.use((req, res, next) => {
+  // Multer procesa las plantillas; no debe competir con express-fileupload.
+  if (req.path === "/api/plantillas" || req.path.startsWith("/api/plantillas/")) {
+    return next();
+  }
+  return legacyFileUpload(req, res, next);
+});
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
-// Archivos administrados por el sistema: plantillas y recursos locales.
-app.use("/api/uploads", express.static(path.join(process.cwd(), "storage")));
 
 // 2. Control de CORS Limpio (Sin interferir con la autenticación)
 app.use((req, res, next) => {
@@ -45,6 +50,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Archivos administrados por el sistema: plantillas y recursos locales.
+app.use("/api/uploads", express.static(path.join(process.cwd(), "storage")));
 
 // 3. Rutas de la API
 // NOTA: Si quieres proteger TODA la API desde aquí, descomenta la siguiente línea:
