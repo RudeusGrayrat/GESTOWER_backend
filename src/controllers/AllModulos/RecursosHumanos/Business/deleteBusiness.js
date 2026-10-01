@@ -1,4 +1,5 @@
 const Business = require("../../../../models/RecursosHumanos/Business");
+const { eliminarImagenEmpresa } = require("../../../../utils/empresaImagenes");
 
 const deleteBusiness = async (req, res) => {
   const { _id } = req.body;
@@ -8,6 +9,8 @@ const deleteBusiness = async (req, res) => {
     if (!userDelete) {
       return res.status(404).json({ message: "Empresa no encontrada" });
     }
+    eliminarImagenEmpresa(userDelete.logo);
+    eliminarImagenEmpresa(userDelete.representative?.signature);
 
     return res.status(200).json({
       message: "Empresa eliminada correctamente",

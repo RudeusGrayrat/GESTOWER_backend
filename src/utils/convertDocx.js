@@ -82,9 +82,11 @@ const convertDocx = async (predata, templatePath) => {
                 // CASO 3: Ruta local
                 // Si tagValue es una ruta absoluta (empieza con C:\ o /), la usamos directo
                 // Si no, la resolvemos desde la raíz del proyecto
-                const finalPath = path.isAbsolute(tagValue)
-                    ? tagValue
-                    : path.join(process.cwd(), "templates", "images", tagValue.replace(/^\//, ""));
+                const finalPath = tagValue.startsWith("/uploads/")
+                    ? path.join(process.cwd(), "storage", tagValue.replace(/^\/uploads\//, ""))
+                    : path.isAbsolute(tagValue)
+                        ? tagValue
+                        : path.join(process.cwd(), "templates", "images", tagValue.replace(/^\//, ""));
 
                 if (!fs.existsSync(finalPath)) {
                     console.error("❌ Imagen no encontrada en:", finalPath);

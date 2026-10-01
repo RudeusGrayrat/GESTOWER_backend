@@ -19,6 +19,7 @@ const getBusinessPaginacion = async (req, res) => {
         }
         const [data, total] = await Promise.all([
             Business.find(query)
+                .select("-logo -representative.signature")
                 .skip(page * limit)
                 .limit(parseInt(limit)),
             Business.countDocuments(query)

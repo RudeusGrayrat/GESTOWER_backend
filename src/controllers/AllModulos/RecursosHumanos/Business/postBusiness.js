@@ -1,4 +1,5 @@
 const Business = require("../../../../models/RecursosHumanos/Business");
+const { guardarImagenEmpresa, eliminarImagenEmpresa } = require("../../../../utils/empresaImagenes");
 
 const createBusiness = async (req, res) => {
   try {
@@ -7,7 +8,7 @@ const createBusiness = async (req, res) => {
     if (!ruc)
       return res.status(400).json({ message: "El campo ruc es obligatorio" });
     if (!razonSocial)
-      res.status(400).json({ message: "El campo razon social es obligatorio" });
+      return res.status(400).json({ message: "El campo razon social es obligatorio" });
     if (!domicilioFiscal)
       return res
         .status(400)
@@ -23,15 +24,24 @@ const createBusiness = async (req, res) => {
         .status(400)
         .json({ message: "Ya existe una empresa con ese ruc" });
 
+    const logoGuardado = guardarImagenEmpresa(logo, "logo");
+    const firmaGuardada = guardarImagenEmpresa(representative.signature, "firma");
     const newBusiness = new Business({
       ruc,
       razonSocial,
       domicilioFiscal,
-      representative,
-      logo,
+      representative: { ...representative, signature: firmaGuardada },
+      logo: logoGuardado,
     });
 
-    const savedBusiness = await newBusiness.save();
+    let savedBusiness;
+    try {
+      savedBusiness = await newBusiness.save();
+    } catch (error) {
+      eliminarImagenEmpresa(logoGuardado);
+      eliminarImagenEmpresa(firmaGuardada);
+      throw error;
+    }
     return res
       .status(201)
       .json({ message: "Empresa creada correctamente", data: savedBusiness });
