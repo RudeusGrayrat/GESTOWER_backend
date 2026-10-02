@@ -1,119 +1,15 @@
-const path = require("path");
-const BoletaDePagos = require("../../../../models/RecursosHumanos/BoletaDePago");
-const DatosContables = require("../../../../models/RecursosHumanos/DatosContablesBoleta");
-const convertDocx = require("../../../../utils/convertDocx");
 const convertToPdf = require("../../../../utils/convertToPdf");
-const obtenerPlantillaLocal = require("../../../../utils/obtenerPlantillaLocal");
-
-const nombresBoleta = {
-  "TOWER AND TOWER S.A.": "TOWER AND TOWER S.A.",
-  "LABORATORIO DE INSTRUMENTOS AMBIENTALES S.A.C.": "LABORATORIO DE INSTRUMENTOS AMBIENTALES S.A.C",
-  "INVERSIONES LURIN S.A.C.": "INVERSIONES LURIN S.A.C",
-  "ECOLOGY RESEARCH AND MENTORING S.C.R.L.": "ECOLOGY RESEARCH AND MENTORING S.R.L",
-  "CORPORACION DE EMPRESAS DE SERVICIOS SOCIEDAD ANONIMA CERRADA - CORPEMSE S.A.C": "CORPORACION DE EMPRESAS Y SERVICIOS S.A.C",
-};
-
-const obtenerPlantillaRespaldo = (razonSocial = "") => {
-  if (razonSocial.includes("LABORATORIO") || razonSocial.includes("LADIAMB")) return "BOLETA_LADIAMB_DOCX.docx";
-  if (razonSocial.includes("CORPEMSE")) return "BOLETA_CORPEMSE_DOCX.docx";
-  if (razonSocial.includes("ECOLOGY")) return "BOLETA_ECOLOGY_DOCX.docx";
-  if (razonSocial.includes("INVERSIONES LURIN")) return "BOLETA_INVERSIONES_LURIN_DOCX.docx";
-  return "BOLETA_TOWER_DOCX.docx";
-};
-
-const monto = (value) => Number.parseFloat(value) || 0;
+const { generarWordBoleta } = require("./documentoBoleta");
 
 const generarPdfBoleta = async (req, res) => {
   try {
-    const boleta = await BoletaDePagos.findById(req.params.id)
-      .populate("colaborador")
-      .populate("empresaColaborador", "ruc razonSocial logo representative")
-      .lean();
-
-    if (!boleta) return res.status(404).json({ message: "Boleta no encontrada" });
-    if (!boleta.colaborador || !boleta.empresaColaborador) {
-      return res.status(400).json({ message: "La boleta no tiene colaborador o empresa disponibles" });
-    }
-
-    const { colaborador, empresaColaborador: empresa } = boleta;
-    const itemsContables = [
-      ...(boleta.remuneraciones || []),
-      ...(boleta.descuentosAlTrabajador || []),
-      ...(boleta.aportacionesDelEmpleador || []),
-    ];
-    const codigos = [...new Set(itemsContables.map((item) => item.datosContables).filter(Boolean))];
-    const catalogo = await DatosContables.find({ codigoPlame: { $in: codigos } }).lean();
-    const conceptosPorCodigo = Object.fromEntries(catalogo.map((item) => [item.codigoPlame, item.concepto]));
-    const concepto = (item) => item.concepto || conceptosPorCodigo[item.datosContables] || "";
-    const ingresos = (boleta.remuneraciones || []).map((item) => ({
-      tipo: "INGRESOS",
-      codigo: item.datosContables || "",
-      concepto: concepto(item),
-      monto: monto(item.monto),
-    }));
-    const descuentos = (boleta.descuentosAlTrabajador || []).map((item) => ({
-      tipo: "APORTES DEL TRABAJADOR",
-      codigo: item.datosContables || "",
-      concepto: concepto(item),
-      monto: monto(item.monto),
-    }));
-    const aportes = (boleta.aportacionesDelEmpleador || []).map((item) => ({
-      codigo: item.datosContables || "",
-      concepto: concepto(item),
-      monto: monto(item.monto),
-    }));
-    const suspensiones = (boleta.suspensionesLaborales || []).map((item) => ({
-      tipoSuspension: item.tipoSuspension || "NINGUNA",
-      motivoSuspension: item.motivoSuspension || "NINGUNA",
-      diasSuspension: Number.parseInt(item.diasSuspension, 10) || 0,
-    }));
-    const dataDocx = {
-      ruc_empresa: empresa.ruc,
-      razonSocial_empresa: empresa.razonSocial,
-      nombre_empresa: nombresBoleta[empresa.razonSocial] || empresa.razonSocial || "",
-      logo_empresa: empresa.logo,
-      logo_encabezado: empresa.logo,
-      firma: empresa.representative?.signature,
-      fechaBoletaDePago: boleta.fechaBoletaDePago,
-      situacionEspecial: boleta.situacionEspecial || "NINGUNA",
-      tipoD: colaborador.documentType || "",
-      numeroD: colaborador.documentNumber || "",
-      colaborador: `${colaborador.lastname || ""} ${colaborador.name || ""}`.trim(),
-      situacion: boleta.situacionTrabajador === "INACTIVO" ? "BAJA" : boleta.situacionTrabajador || colaborador.state || "",
-      codigoSpp: boleta.codigoSpp || colaborador.codigoSpp || "",
-      ingreso: boleta.fechaIngresoColaborador || colaborador.dateStart || "",
-      regimen: colaborador.regimenPension || "",
-      días: Number.parseInt(boleta.diasTrabajados, 10) || 0,
-      noLaborados: Number.parseInt(boleta.diasNoLaborales, 10) || 0,
-      diasSubsidiados: Number.parseInt(boleta.diasSubsidiados, 10) || 0,
-      horas: Number.parseInt(boleta.horasTrabajadas, 10) || 0,
-      tipoT: boleta.tipoTrabajador || colaborador.tipoTrabajador || "Empleado",
-      suspensiones,
-      tipoSuspension: suspensiones.map((item) => item.tipoSuspension).join("\n"),
-      motivoSuspension: suspensiones.map((item) => item.motivoSuspension).join("\n"),
-      diasSuspension: suspensiones.map((item) => item.diasSuspension).join("\n"),
-      ingresos,
-      descuentos,
-      aportes,
-      total: Number.parseFloat((ingresos.reduce((sum, item) => sum + item.monto, 0) - descuentos.reduce((sum, item) => sum + item.monto, 0)).toFixed(2)),
-    };
-
-    const plantillaGlobal = await obtenerPlantillaLocal({ tipo: "BOLETA" });
-    const templatePath = plantillaGlobal?.ruta || path.join(process.cwd(), "templates", obtenerPlantillaRespaldo(empresa.razonSocial));
-    const wordBuffer = await convertDocx(dataDocx, templatePath);
+    const { wordBuffer, nombre } = await generarWordBoleta(req.params.id);
     const pdfBuffer = await convertToPdf(wordBuffer);
-    const nombre = `Boleta_${boleta.correlativa || boleta._id}.pdf`;
-
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${nombre}"`,
-      "Content-Length": pdfBuffer.length,
-      "Cache-Control": "no-store",
-    });
+    res.set({ "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${nombre.replace(/\.docx$/i, ".pdf")}"`, "Content-Length": pdfBuffer.length, "Cache-Control": "no-store" });
     return res.send(pdfBuffer);
   } catch (error) {
     console.error("Error al generar PDF de boleta:", error);
-    return res.status(500).json({ message: "No se pudo generar la vista previa de la boleta" });
+    return res.status(error.status || 500).json({ message: error.message || "No se pudo generar la vista previa de la boleta" });
   }
 };
 

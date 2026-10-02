@@ -47,6 +47,8 @@ const getDatosContables = require("../controllers/AllModulos/RecursosHumanos/Bol
 const patchBoleDePago = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/patchBoletaDePago");
 const enviarBoleta = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/enviarBoleta");
 const generarPdfBoleta = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/generarPdfBoleta");
+const { crearOfficePreview, entregarDocumentoOffice } = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/officePreviewBoleta");
+const tokenVerify = require("../controllers/auth/midellware");
 const recepcionBoleta = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/recibirBoleta");
 const updateAsistenciaColaborador = require("../controllers/AllModulos/RecursosHumanos/Asistencia/colaborador/updateAsistenciaColaborador");
 const deleteBoletaDePago = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/deleteBoletaDePago");
@@ -206,6 +208,8 @@ router.get("/recepcionBoleta", recepcionBoleta);
 router.get("/getDatosContables", getDatosContables);
 router.get("/getBoletaDePagos", getBoletaDePagos);
 router.get("/boletas/:id/pdf", generarPdfBoleta);
+router.get("/boletas/:id/office-preview", tokenVerify, crearOfficePreview);
+router.get("/boletas/:id/office-preview.docx", entregarDocumentoOffice);
 router.get("/getAllAsistenciaColaborador", getAllAsistenciaColaborador);
 router.get("/getPlantillasDeContrato", getAllPlantillasDeContrato);
 router.get("/plantillas", getPlantillas);
