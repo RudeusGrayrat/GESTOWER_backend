@@ -73,15 +73,22 @@ const prepararMarcaAgua = async (imageBuffer) => {
             .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
             .png()
             .toBuffer();
-        const { width, height } = await sharp(logoProporcional).metadata();
-        if (!width || !height) return imageBuffer;
-        const logoClaro = await sharp(logoProporcional).ensureAlpha().composite([{
-            input: { create: { width, height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0.62 } } },
-            blend: "over",
-        }]).png().toBuffer();
+        const { data, info } = await sharp(logoProporcional)
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        // Reducimos solo el canal alpha existente. A diferencia de una capa blanca,
+        // el fondo transparente sigue transparente y no aparece un rectangulo al exportar.
+        for (let index = 3; index < data.length; index += info.channels) {
+            data[index] = Math.round(data[index] * 0.38);
+        }
+        const logoTranslucido = await sharp(data, {
+            raw: { width: info.width, height: info.height, channels: info.channels },
+        }).png().toBuffer();
         // La plantilla nueva mantiene recto el cuadro; el logo conserva el giro
         // original dentro de un lienzo transparente que no rebasa sus limites.
-        const logoRotado = await sharp(logoClaro)
+        const logoRotado = await sharp(logoTranslucido)
             .rotate(anguloMarcaAgua, { background: { r: 255, g: 255, b: 255, alpha: 0 } })
             .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
             .png()
