@@ -86,11 +86,10 @@ const prepararMarcaAgua = async (imageBuffer) => {
         const logoTranslucido = await sharp(data, {
             raw: { width: info.width, height: info.height, channels: info.channels },
         }).png().toBuffer();
-        // La plantilla nueva mantiene recto el cuadro; el logo conserva el giro
-        // original dentro de un lienzo transparente que no rebasa sus limites.
+        // Prueba visual: se conserva la escala previa al giro para compararla con
+        // la variante ajustada. El cuadro de Word sigue delimitando el resultado.
         const logoRotado = await sharp(logoTranslucido)
             .rotate(anguloMarcaAgua, { background: { r: 255, g: 255, b: 255, alpha: 0 } })
-            .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
             .png()
             .toBuffer();
 
