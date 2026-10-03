@@ -4,7 +4,13 @@ const ImageModule = require("docxtemplater-image-module-free");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
-const sharp = require("sharp");
+let sharp;
+try {
+    sharp = require("sharp");
+} catch (error) {
+    // La generación documental sigue operativa aunque falte la mejora visual opcional.
+    console.warn("Sharp no está disponible; la marca de agua conservará el logo original.");
+}
 
 const IMAGEN_TRANSPARENTE = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLkNwAAAABJRU5ErkJggg==",
@@ -63,6 +69,7 @@ const calcularAnchoProporcional = (imageData, width) => {
 };
 
 const aclararMarcaAgua = async (imageBuffer) => {
+    if (!sharp) return imageBuffer;
     try {
         const imagen = sharp(imageBuffer).ensureAlpha();
         const { width, height } = await imagen.metadata();
