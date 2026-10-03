@@ -86,21 +86,10 @@ const prepararMarcaAgua = async (imageBuffer) => {
         const logoTranslucido = await sharp(data, {
             raw: { width: info.width, height: info.height, channels: info.channels },
         }).png().toBuffer();
-        // Prueba visual: se conserva la escala previa al giro. Recortamos al
-        // lienzo del cuadro para que Sharp no descarte la marca de agua completa.
-        const logoRotadoExpandido = await sharp(logoTranslucido)
+        // El PNG final conserva la proporcion del marco definido en Word.
+        const logoRotado = await sharp(logoTranslucido)
             .rotate(anguloMarcaAgua, { background: { r: 255, g: 255, b: 255, alpha: 0 } })
-            .png()
-            .toBuffer();
-        const dimensionesRotadas = await sharp(logoRotadoExpandido).metadata();
-        if (!dimensionesRotadas.width || !dimensionesRotadas.height) return imageBuffer;
-        const logoRotado = await sharp(logoRotadoExpandido)
-            .extract({
-                left: Math.max(0, Math.round((dimensionesRotadas.width - anchoLienzo) / 2)),
-                top: Math.max(0, Math.round((dimensionesRotadas.height - altoLienzo) / 2)),
-                width: Math.min(anchoLienzo, dimensionesRotadas.width),
-                height: Math.min(altoLienzo, dimensionesRotadas.height),
-            })
+            .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
             .png()
             .toBuffer();
 
