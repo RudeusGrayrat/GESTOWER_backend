@@ -62,30 +62,32 @@ const calcularTamanoProporcional = (imageData, maxWidth, maxHeight) => {
     return [Math.round(dimensions.width * scale), Math.round(dimensions.height * scale)];
 };
 
-const calcularAnchoProporcional = (imageData, width) => {
-    const dimensions = obtenerDimensionesImagen(imageData);
-    if (!dimensions?.width || !dimensions?.height) return [width, width];
-    return [width, Math.round((dimensions.height * width) / dimensions.width)];
-};
-
-const aclararMarcaAgua = async (imageBuffer) => {
+const prepararMarcaAgua = async (imageBuffer) => {
     if (!sharp) return imageBuffer;
     try {
         const imagen = sharp(imageBuffer).ensureAlpha();
-        const { width, height } = await imagen.metadata();
+        const logoProporcional = await imagen
+            .resize(506, 238, { fit: "inside", withoutEnlargement: false })
+            .png()
+            .toBuffer();
+        const { width, height } = await sharp(logoProporcional).metadata();
         if (!width || !height) return imageBuffer;
-
-        return await imagen.composite([{
+        const logoClaro = await sharp(logoProporcional).ensureAlpha().composite([{
             input: { create: { width, height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0.62 } } },
             blend: "over",
         }]).png().toBuffer();
+        // El lienzo coincide con el cuadro de texto de Word: nunca invade las tablas.
+        return await sharp({ create: { width: 506, height: 238, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0 } } })
+            .composite([{ input: logoClaro, gravity: "center" }])
+            .png()
+            .toBuffer();
     } catch (error) {
         console.warn("No se pudo aclarar la marca de agua; se usará el logo original.", error.message);
         return imageBuffer;
     }
 };
 
-const convertDocx = async (predata, templatePath) => {
+const convertDocx = async (predata, templatePath, options = {}) => {
     try {
         console.time("⏱️ Tiempo convertDocx");
         const content = fs.readFileSync(path.resolve(templatePath), "binary");
@@ -127,12 +129,15 @@ const convertDocx = async (predata, templatePath) => {
                     imageBuffer = fs.readFileSync(finalPath);
                 }
 
-                return tagName === "logo_empresa" ? aclararMarcaAgua(imageBuffer) : imageBuffer;
+                return tagName === "logo_empresa" && options.marcaAguaBoleta
+                    ? prepararMarcaAgua(imageBuffer)
+                    : imageBuffer;
             },
             getSize: (imageData, tagValue, tagName) => {
                 // Cada imagen ocupa su espacio máximo sin perder su proporción original.
                 // La marca de agua ocupa siempre el ancho definido por su cuadro de texto.
-                if (tagName === "logo_empresa") return calcularAnchoProporcional(imageData, 506);
+                if (tagName === "logo_empresa" && options.marcaAguaBoleta) return [506, 238];
+                if (tagName === "logo_empresa") return calcularTamanoProporcional(imageData, 506, 238);
                 if (tagName === "logo_encabezado") return calcularTamanoProporcional(imageData, 108, 48);
                 if (tagName === "firma") return calcularTamanoProporcional(imageData, 106, 72);
                 if (tagName === "url_imagen") return [180, 130];

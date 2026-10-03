@@ -52,7 +52,7 @@ const generarWordBoleta = async (boletaId) => {
   };
   const global = await obtenerPlantillaLocal({ tipo: "BOLETA" });
   const templatePath = global?.ruta || path.join(process.cwd(), "templates", plantillaRespaldo(empresa.razonSocial));
-  const wordBuffer = await convertDocx(data, templatePath);
+  const wordBuffer = await convertDocx(data, templatePath, { marcaAguaBoleta: true });
   return { wordBuffer, nombre: `Boleta_${boleta.correlativa || boleta._id}.docx` };
 };
 

@@ -132,7 +132,7 @@ const enviarBoleta = async (req, res) => {
           if (!findBoleta) {
             throw new Error("Boleta no encontrada");
           }
-          const wordBuffer = await convertDocx(dataDocx, templatePath);
+          const wordBuffer = await convertDocx(dataDocx, templatePath, { marcaAguaBoleta: true });
           if (!wordBuffer) {
             throw new Error("Error al generar el documento Word");
           }
