@@ -44,4 +44,20 @@ const entregarDocumentoOffice = async (req, res) => {
   }
 };
 
-module.exports = { crearOfficePreview, entregarDocumentoOffice };
+const descargarWordBoleta = async (req, res) => {
+  try {
+    const { wordBuffer, nombre } = await generarWordBoleta(req.params.id);
+    res.set({
+      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Disposition": `attachment; filename="${nombre}"`,
+      "Content-Length": wordBuffer.length,
+      "Cache-Control": "no-store",
+    });
+    return res.send(wordBuffer);
+  } catch (error) {
+    console.error("Error al descargar Word de boleta:", error.message);
+    return res.status(error.status || 500).json({ message: error.message || "No se pudo generar el documento Word" });
+  }
+};
+
+module.exports = { crearOfficePreview, entregarDocumentoOffice, descargarWordBoleta };

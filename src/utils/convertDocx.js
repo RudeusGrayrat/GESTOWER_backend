@@ -4,6 +4,7 @@ const ImageModule = require("docxtemplater-image-module-free");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
+const sharp = require("sharp");
 
 const IMAGEN_TRANSPARENTE = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLkNwAAAABJRU5ErkJggg==",
@@ -55,6 +56,28 @@ const calcularTamanoProporcional = (imageData, maxWidth, maxHeight) => {
     return [Math.round(dimensions.width * scale), Math.round(dimensions.height * scale)];
 };
 
+const calcularAnchoProporcional = (imageData, width) => {
+    const dimensions = obtenerDimensionesImagen(imageData);
+    if (!dimensions?.width || !dimensions?.height) return [width, width];
+    return [width, Math.round((dimensions.height * width) / dimensions.width)];
+};
+
+const aclararMarcaAgua = async (imageBuffer) => {
+    try {
+        const imagen = sharp(imageBuffer).ensureAlpha();
+        const { width, height } = await imagen.metadata();
+        if (!width || !height) return imageBuffer;
+
+        return await imagen.composite([{
+            input: { create: { width, height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0.62 } } },
+            blend: "over",
+        }]).png().toBuffer();
+    } catch (error) {
+        console.warn("No se pudo aclarar la marca de agua; se usará el logo original.", error.message);
+        return imageBuffer;
+    }
+};
+
 const convertDocx = async (predata, templatePath) => {
     try {
         console.time("⏱️ Tiempo convertDocx");
@@ -63,41 +86,46 @@ const convertDocx = async (predata, templatePath) => {
 
         const imageOptions = {
             centered: false,
-            getImage: async (tagValue) => {
+            getImage: async (tagValue, tagName) => {
                 // Logo y firma son opcionales: se conserva el espacio de la plantilla vacío.
                 if (!tagValue) return IMAGEN_TRANSPARENTE;
+                let imageBuffer;
 
                 // CASO 1: URL externa
                 if (tagValue.startsWith("http")) {
                     const response = await axios.get(tagValue, { responseType: "arraybuffer" });
-                    return response.data;
+                    imageBuffer = Buffer.from(response.data);
                 }
 
                 // CASO 2: Base64
-                if (tagValue.startsWith("data:image")) {
+                else if (tagValue.startsWith("data:image")) {
                     const base64Data = tagValue.split(",")[1];
-                    return Buffer.from(base64Data, "base64");
+                    imageBuffer = Buffer.from(base64Data, "base64");
                 }
 
                 // CASO 3: Ruta local
                 // Si tagValue es una ruta absoluta (empieza con C:\ o /), la usamos directo
                 // Si no, la resolvemos desde la raíz del proyecto
-                const finalPath = tagValue.startsWith("/uploads/")
-                    ? path.join(process.cwd(), "storage", tagValue.replace(/^\/uploads\//, ""))
-                    : path.isAbsolute(tagValue)
-                        ? tagValue
-                        : path.join(process.cwd(), "templates", "images", tagValue.replace(/^\//, ""));
+                else {
+                    const finalPath = tagValue.startsWith("/uploads/")
+                        ? path.join(process.cwd(), "storage", tagValue.replace(/^\/uploads\//, ""))
+                        : path.isAbsolute(tagValue)
+                            ? tagValue
+                            : path.join(process.cwd(), "templates", "images", tagValue.replace(/^\//, ""));
 
-                if (!fs.existsSync(finalPath)) {
-                    console.error("❌ Imagen no encontrada en:", finalPath);
-                    throw new Error(`Imagen no encontrada: ${finalPath}`);
+                    if (!fs.existsSync(finalPath)) {
+                        console.error("❌ Imagen no encontrada en:", finalPath);
+                        throw new Error(`Imagen no encontrada: ${finalPath}`);
+                    }
+                    imageBuffer = fs.readFileSync(finalPath);
                 }
 
-                return fs.readFileSync(finalPath);
+                return tagName === "logo_empresa" ? aclararMarcaAgua(imageBuffer) : imageBuffer;
             },
             getSize: (imageData, tagValue, tagName) => {
                 // Cada imagen ocupa su espacio máximo sin perder su proporción original.
-                if (tagName === "logo_empresa") return calcularTamanoProporcional(imageData, 506, 238);
+                // La marca de agua ocupa siempre el ancho definido por su cuadro de texto.
+                if (tagName === "logo_empresa") return calcularAnchoProporcional(imageData, 506);
                 if (tagName === "logo_encabezado") return calcularTamanoProporcional(imageData, 108, 48);
                 if (tagName === "firma") return calcularTamanoProporcional(imageData, 106, 72);
                 if (tagName === "url_imagen") return [180, 130];
