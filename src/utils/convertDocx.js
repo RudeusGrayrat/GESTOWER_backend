@@ -65,9 +65,12 @@ const calcularTamanoProporcional = (imageData, maxWidth, maxHeight) => {
 const prepararMarcaAgua = async (imageBuffer) => {
     if (!sharp) return imageBuffer;
     try {
+        const anchoLienzo = 506;
+        const altoLienzo = 238;
+        const anguloMarcaAgua = -36.646;
         const imagen = sharp(imageBuffer).ensureAlpha();
         const logoProporcional = await imagen
-            .resize(506, 238, { fit: "inside", withoutEnlargement: false })
+            .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
             .png()
             .toBuffer();
         const { width, height } = await sharp(logoProporcional).metadata();
@@ -76,9 +79,17 @@ const prepararMarcaAgua = async (imageBuffer) => {
             input: { create: { width, height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0.62 } } },
             blend: "over",
         }]).png().toBuffer();
-        // El lienzo coincide con el cuadro de texto de Word: nunca invade las tablas.
-        return await sharp({ create: { width: 506, height: 238, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0 } } })
-            .composite([{ input: logoClaro, gravity: "center" }])
+
+        // La plantilla nueva mantiene recto el cuadro; el logo conserva el giro
+        // original dentro de un lienzo transparente que no rebasa sus limites.
+        const logoRotado = await sharp(logoClaro)
+            .rotate(anguloMarcaAgua, { background: { r: 255, g: 255, b: 255, alpha: 0 } })
+            .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
+            .png()
+            .toBuffer();
+
+        return await sharp({ create: { width: anchoLienzo, height: altoLienzo, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0 } } })
+            .composite([{ input: logoRotado, gravity: "center" }])
             .png()
             .toBuffer();
     } catch (error) {
