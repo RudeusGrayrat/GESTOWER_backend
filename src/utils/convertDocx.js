@@ -73,9 +73,15 @@ const prepararMarcaAgua = async (imageBuffer) => {
             .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
             .png()
             .toBuffer();
+        const { width, height } = await sharp(logoProporcional).metadata();
+        if (!width || !height) return imageBuffer;
+        const logoClaro = await sharp(logoProporcional).ensureAlpha().composite([{
+            input: { create: { width, height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0.62 } } },
+            blend: "over",
+        }]).png().toBuffer();
         // La plantilla nueva mantiene recto el cuadro; el logo conserva el giro
         // original dentro de un lienzo transparente que no rebasa sus limites.
-        const logoRotado = await sharp(logoProporcional)
+        const logoRotado = await sharp(logoClaro)
             .rotate(anguloMarcaAgua, { background: { r: 255, g: 255, b: 255, alpha: 0 } })
             .resize(anchoLienzo, altoLienzo, { fit: "inside", withoutEnlargement: false })
             .png()
