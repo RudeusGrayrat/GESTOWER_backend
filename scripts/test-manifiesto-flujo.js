@@ -1,0 +1,65 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const Manifiesto = require("../src/models/AllModulos/Certificacion/Manifiestos");
+const Destino = require("../src/models/AllModulos/Certificacion/Destino");
+const Generador = require("../src/models/AllModulos/Certificacion/Generadores");
+const Transportista = require("../src/models/AllModulos/Certificacion/Transportistas");
+const Vinculacion = require("../src/models/ManifesTower/Vinculacion");
+const UserExternal = require("../src/models/ManifesTower/UserExternal");
+const NotificationService = require("../src/controllers/Herramientas/Notification/CreateNotification");
+const enviar = require("../src/controllers/AllModulos/Certificaciones/ManifesTower/envioManifiesto");
+const observar = require("../src/controllers/AllModulos/Certificaciones/ManifesTower/observarManifiestoGenerador");
+const editar = require("../src/controllers/AllModulos/Certificaciones/Manifiestos/patchManifiesto");
+const aprobar = require("../src/controllers/AllModulos/Certificaciones/ManifesTower/approveFirma");
+const verificar = require("../src/controllers/AllModulos/Certificaciones/Manifiestos/verificarManifiesto");
+
+const firma = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLkNwAAAABJRU5ErkJggg==";
+const id = "0123456789abcdef01234567";
+const response = () => ({ statusCode: 200, status(code) { this.statusCode = code; return this; }, json(data) { this.data = data; return this; } });
+
+test("borrador, observaciones de generador y destino, corrección, reenvío y aprobación", async (t) => {
+    const manifiesto = new Manifiesto({ numeroManifiesto: "PRUEBA", estado: "BORRADOR", generadorId: id, transportistaId: id, destinoId: id,
+        planta: { coordenadasUtm: { este: "123", norte: "456" } },
+        residuo: { descripcion: "Inicial", cantidadTotal: 1, estadoFisico: "SOLIDO" }, transporte: { cantidadRecibida: 1 } });
+    t.mock.method(manifiesto, "save", async () => manifiesto);
+    t.mock.method(Manifiesto, "findById", () => ({ populate() { return this; }, then(resolve, reject) { return Promise.resolve(manifiesto).then(resolve, reject); } }));
+    t.mock.method(Transportista, "findById", async () => ({ responsables: [{ nombre: "Transporte", dni: "1", cargo: "Responsable", firmaResponsable: firma }] }));
+    t.mock.method(Generador, "findById", async () => ({ responsablesTecnicos: [{ nombreResponsable: "Generador", dniResponsable: "2", cargoResponsable: "Responsable", firmaResponsable: firma }] }));
+    t.mock.method(Destino, "findById", async () => ({ responsables: [{ nombre: "Destino", dni: "3", cargo: "Responsable", firmaResponsable: firma }] }));
+    t.mock.method(Vinculacion, "findOne", async () => ({ tienePermisoLlenado: true }));
+    t.mock.method(UserExternal, "find", () => ({ select: () => ({ lean: async () => [{ _id: id, generadorId: id, transportistaId: id, roles: ["GENERADOR", "TRANSPORTISTA"] }] }) }));
+    t.mock.method(UserExternal, "findOne", async () => ({ _id: id }));
+    const notificaciones = [];
+    t.mock.method(NotificationService, "send", async (_io, data) => { notificaciones.push(data); });
+    const req = (body = {}) => ({ params: { id, manifiestoId: id }, body, query: { usuarioId: id }, user: { _id: id }, app: { get: () => ({}) } });
+    const ejecutar = async (controller, body) => { const res = response(); await controller(req(body), res); return res; };
+
+    assert.equal((await ejecutar(enviar)).statusCode, 200);
+    assert.equal(manifiesto.estado, "PENDIENTE");
+    assert.equal(manifiesto.referendoEntrega.firmaGenerador, "");
+    assert.equal((await ejecutar(editar, { residuo: { descripcion: "No permitido" } })).statusCode, 400);
+    assert.equal((await ejecutar(observar, { observacion: "Corregir residuo", usuarioId: id })).statusCode, 200);
+    assert.equal(manifiesto.estado, "OBSERVADO");
+    assert.equal((await ejecutar(verificar, { estado: "APROBADO", usuarioId: id })).statusCode, 400);
+    assert.equal((await ejecutar(editar, { planta: { coordenadasUtm: { este: "789" } }, residuo: { descripcion: "Corregido" }, transporte: { cantidadRecibida: 2 }, modificadoPor: id })).statusCode, 200);
+    assert.equal(manifiesto.residuo.descripcion, "Corregido");
+    assert.equal(manifiesto.residuo.cantidadTotal, 1);
+    assert.equal(manifiesto.planta.coordenadasUtm.este, "789");
+    assert.equal(manifiesto.planta.coordenadasUtm.norte, "456");
+    assert.equal(manifiesto.referendoEntrega.firmaResponsableEors, undefined);
+    assert.equal((await ejecutar(enviar)).statusCode, 200);
+    assert.equal((await ejecutar(aprobar)).statusCode, 200);
+    assert.equal(manifiesto.estado, "ENVIADO");
+    assert.equal((await ejecutar(verificar, { estado: "OBSERVADO", observaciones: "Corregir cantidad", usuarioId: id })).statusCode, 200);
+    assert.equal((await ejecutar(editar, { residuo: { cantidadTotal: 2 }, modificadoPor: id })).statusCode, 200);
+    assert.equal(manifiesto.referendoEntrega.firmaGenerador, undefined);
+    assert.equal((await ejecutar(enviar)).statusCode, 200);
+    assert.equal((await ejecutar(aprobar)).statusCode, 200);
+    assert.equal((await ejecutar(verificar, { estado: "APROBADO", usuarioId: id })).statusCode, 200);
+    assert.equal(manifiesto.estado, "APROBADO");
+    assert.equal(manifiesto.referendoRecepcion.responsableEorsDestino, "Destino");
+    assert.ok(manifiesto.historialRevision.some((evento) => evento.origen === "GENERADOR" && evento.observacion === "Corregir residuo"));
+    assert.ok(manifiesto.historialRevision.some((evento) => evento.origen === "DESTINO" && evento.observacion === "Corregir cantidad"));
+    assert.ok(notificaciones.length >= 6);
+    assert.equal((await ejecutar(editar, { residuo: { descripcion: "No permitido" } })).statusCode, 400);
+});

@@ -24,6 +24,9 @@ const loginExternal = async (req, res) => {
         if (!userAuth) {
             return res.status(404).json({ message: "Usuario no registrado en el sistema", type: "Error" });
         }
+        if (userAuth.estado !== "ACTIVO") {
+            return res.status(403).json({ message: "La cuenta no está activa.", type: "Error" });
+        }
 
         // 3. Validar contraseña contra el hash de la cuenta unificada
         const isMatch = await bcrypt.compare(password, userAuth.password);

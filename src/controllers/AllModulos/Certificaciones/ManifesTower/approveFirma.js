@@ -4,6 +4,7 @@ const Transportista = require("../../../../models/AllModulos/Certificacion/Trans
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
+const snapshotFirma = require("../../../../utils/manifiestoFirmaSnapshot");
 
 const aprobarManifiestoGenerador = async (req, res) => {
     try {
@@ -26,26 +27,61 @@ const aprobarManifiestoGenerador = async (req, res) => {
         if (manifiesto.estado !== "PENDIENTE") {
             return res.status(400).json({ message: "Solo se pueden firmar manifiestos en estado PENDIENTE.", type: "Alerta" });
         }
+        manifiesto.$where = { estado: "PENDIENTE" };
 
         // ==========================================
         // 🛡️ VALIDACIÓN DE FIRMA DEL GENERADOR
         // ==========================================
         const perfilGenerador = await Generador.findById(manifiesto.generadorId?._id || manifiesto.generadorId);
-        const tieneFirmaActiva = perfilGenerador?.responsablesTecnicos?.some(
-            (resp) => resp.firmaResponsable && resp.firmaResponsable.trim() !== ""
+        const responsablesConFirma = (perfilGenerador?.responsablesTecnicos || []).filter(
+            (resp) => typeof resp.firmaResponsable === "string" && resp.firmaResponsable.trim() !== ""
         );
+        const nombreSeleccionado = manifiesto.referendoEntrega?.generadorResponsableManejo;
+        const responsableFirmante = nombreSeleccionado
+            ? responsablesConFirma.find((resp) => resp.nombreResponsable === nombreSeleccionado)
+            : responsablesConFirma[0];
 
-        if (!tieneFirmaActiva) {
+        if (!responsableFirmante) {
             return res.status(400).json({
-                message: "Operación Bloqueada: Tu empresa Generadora no cuenta con una firma digital registrada en su Perfil Técnico. Ve a Configuración de Cuenta y sube tu firma antes de aprobar.",
+                message: "El responsable seleccionado no tiene una imagen de firma registrada. Revisa el responsable y su firma antes de aprobar.",
                 type: "Alerta"
             });
         }
         // ==========================================
 
+        let firmaGenerador;
+        try {
+            firmaGenerador = await snapshotFirma(responsableFirmante.firmaResponsable);
+        } catch (error) {
+            return res.status(400).json({ message: `No se pudo conservar la firma del generador: ${error.message}`, type: "Alerta" });
+        }
+        const fechaFirma = new Date();
+        manifiesto.referendoEntrega = {
+            ...manifiesto.referendoEntrega?.toObject(),
+            referendo: true,
+            generadorResponsableManejo: responsableFirmante.nombreResponsable,
+            firmaGenerador,
+            fechaHora: fechaFirma,
+        };
+        manifiesto.eventosFirma.push({
+            accion: "APROBACION_GENERADOR",
+            fecha: fechaFirma,
+            actorIdDeclarado: usuarioId,
+            actorTipo: "UserExternal",
+            identidadVerificada: !!req.externalUser,
+            responsables: [{
+                rol: "GENERADOR",
+                nombre: responsableFirmante.nombreResponsable,
+                dni: responsableFirmante.dniResponsable,
+                cargo: responsableFirmante.cargoResponsable,
+                firma: firmaGenerador,
+            }],
+        });
         manifiesto.estado = "ENVIADO";
-        manifiesto.fechaEnvio = new Date();
+        manifiesto.fechaEnvio = fechaFirma;
         manifiesto.firmadoPorGenerador = usuarioId;
+        manifiesto.observacion = "";
+        manifiesto.historialRevision.push({ estado: "ENVIADO", origen: "GENERADOR", fecha: fechaFirma, actorIdDeclarado: usuarioId });
         await manifiesto.save();
 
         // 3. Evaluar e inyectar el permiso automático si el Generador lo autorizó en el diálogo
@@ -89,7 +125,7 @@ const aprobarManifiestoGenerador = async (req, res) => {
                 await NotificationService.send(io, {
                     type: "INDIVIDUAL",
                     title: "Manifiesto Aprobado y Firmado",
-                    message: `El generador ${manifiesto.generadorId?.razonSocial} ha firmado digitalmente el manifiesto ${manifiesto.numeroManifiesto}. El documento ha sido despachado al destino de forma automática.`,
+                    message: `El generador ${manifiesto.generadorId?.razonSocial} ha aprobado el manifiesto ${manifiesto.numeroManifiesto} usando su firma registrada. El documento ha sido enviado al destino.`,
                     creator: { id: usuarioId, model: "UserExternal" },
                     scope: { receiverModel: "UserExternal", receiverId: usuarioTransportista._id },
                     entity: { id: manifiesto._id, model: "Manifiesto" }
@@ -101,12 +137,13 @@ const aprobarManifiestoGenerador = async (req, res) => {
         }
 
         return res.status(200).json({
-            message: "Manifiesto firmado digitalmente y despachado con éxito al destino.",
+            message: "Manifiesto aprobado con la firma registrada y enviado al destino.",
             type: "Correcto",
             data: manifiesto
         });
 
     } catch (error) {
+        if (error.name === "DocumentNotFoundError") return res.status(409).json({ message: "El manifiesto cambió durante la revisión. Actualiza la lista.", type: "Advertencia" });
         console.error("❌ Error en aprobarManifiestoGenerador:", error);
         return res.status(500).json({ message: "Error interno en el servidor al firmar el manifiesto.", type: "Error" });
     }

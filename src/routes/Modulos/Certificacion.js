@@ -19,21 +19,23 @@ const patchManifiesto = require("../../controllers/AllModulos/Certificaciones/Ma
 const importStockJson = require("../../controllers/AllModulos/Almacen/Stock/postStockJson");
 const getTransportistaById = require("../../controllers/AllModulos/Certificaciones/Transportistas/getTransportistaById");
 const verificarManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/verificarManifiesto");
+const accesoConsultaManifiesto = require("../../controllers/AllModulos/Certificaciones/ManifesTower/accesoConsultaManifiesto");
+const accesoEscrituraManifiesto = require("../../controllers/AllModulos/Certificaciones/ManifesTower/accesoEscrituraManifiesto");
 
 const certificacionesRouter = Router();
 
 certificacionesRouter.get("/getGeneradoresPaginacion", getGeneradoresPaginacion);
-certificacionesRouter.get("/getManifiestosPaginacion", getManifiestosPaginacion);
+certificacionesRouter.get("/getManifiestosPaginacion", accesoConsultaManifiesto.autenticar, accesoConsultaManifiesto.permiso, accesoConsultaManifiesto.filtrar, getManifiestosPaginacion);
 certificacionesRouter.get("/getGeneradoresByTransportista/:transportistaId", getGeneradoresByTransportista);
 certificacionesRouter.get("/getTransportistasPaginacion", getTransportistaPagination);
 certificacionesRouter.get("/getTransportistaById/:id", getTransportistaById);
 certificacionesRouter.get("/getDestinosPaginacion", getDestinoPagination);
 certificacionesRouter.get("/getUbigeoPaginacion", getUbigeoPagination);
-certificacionesRouter.get("/getpdfManifiesto/:id", generarPDFManifiesto);
+certificacionesRouter.get("/getpdfManifiesto/:id", accesoConsultaManifiesto.autenticar, accesoConsultaManifiesto.permiso, accesoConsultaManifiesto.documento, generarPDFManifiesto);
 certificacionesRouter.get("/stockByJson", importStockJson);
 
 certificacionesRouter.post("/postGenerador", postGenerador);
-certificacionesRouter.post("/postManifiesto", postManifiesto);
+certificacionesRouter.post("/postManifiesto", accesoConsultaManifiesto.autenticar, accesoEscrituraManifiesto.permiso("CREAR", true), accesoEscrituraManifiesto.crear, postManifiesto);
 certificacionesRouter.post("/postTransportista", postTransportista);
 certificacionesRouter.post("/postUbigeo", postUbigeo);
 certificacionesRouter.post("/postUbigeosBatch", postUbigeosBatch);
@@ -42,7 +44,7 @@ certificacionesRouter.post("/postDestino", postDestino);
 certificacionesRouter.patch("/editTransportista/:transportistaId", patchTransportista)
 certificacionesRouter.patch("/editGenerador/:generadorId", patchGenerador)
 certificacionesRouter.patch("/editDestino/:destinoId", patchDestino)
-certificacionesRouter.patch("/patchManifiesto/:manifiestoId", patchManifiesto)
-certificacionesRouter.patch("/verificarManifiesto/:id", verificarManifiesto)
+certificacionesRouter.patch("/patchManifiesto/:manifiestoId", accesoConsultaManifiesto.autenticar, accesoEscrituraManifiesto.permiso("EDITAR", true), accesoEscrituraManifiesto.editar, patchManifiesto)
+certificacionesRouter.patch("/verificarManifiesto/:id", accesoConsultaManifiesto.autenticar, accesoEscrituraManifiesto.permiso("APROBAR", false), verificarManifiesto)
 
 module.exports = certificacionesRouter;

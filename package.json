@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Skipping tests...\"",
-    "start": "node index.js"
+    "start": "node index.js",
+    "migrate:stock-subitem": "node scripts/migrate-stock-subitem.js"
   },
   "keywords": [],
   "author": "",

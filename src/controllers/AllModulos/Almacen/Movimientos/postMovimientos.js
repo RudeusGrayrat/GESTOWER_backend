@@ -6,7 +6,7 @@ const dayjs = require("dayjs");
 const cleanBase64 = (str) => str?.includes(",") ? str.split(",")[1] : str;
 
 const createMovimiento = async (req, res) => {
-  let uploadedPublicId = []; // Para control de errores
+  const uploadedPublicIds = []; // Para control de errores
 
   try {
     const { body } = req;
@@ -19,7 +19,8 @@ const createMovimiento = async (req, res) => {
     let imagenUrls = [];
     if (body.referenciaImagen && Array.isArray(body.referenciaImagen)) {
       for (let i = 0; i < body.referenciaImagen.length; i++) {
-        const img = body.referenciaImagen[i];
+        const rawImage = body.referenciaImagen[i];
+        const img = typeof rawImage === "object" ? rawImage.fileData : rawImage;
 
         if (img && img.startsWith("data:image")) {
           const fileBuffer = Buffer.from(cleanBase64(img), "base64");

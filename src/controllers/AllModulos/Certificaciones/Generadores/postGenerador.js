@@ -3,6 +3,7 @@ const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const cleanBase64 = require("../../../../utils/cleanBase64");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
+const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
 const postGenerador = async (req, res) => {
     const uploadedPublicIds = [];
@@ -43,6 +44,20 @@ const postGenerador = async (req, res) => {
         });
 
         await newGenerador.save();
+
+        // Notifica únicamente al personal de Gestower suscrito al submódulo GENERADORES.
+        try {
+            await NotificationService.send(req.app.get("io"), {
+                type: "SUBMODULE",
+                title: "Nuevo Generador Registrado",
+                message: `Se registró el generador ${newGenerador.razonSocial} (RUC: ${newGenerador.ruc}).`,
+                creator: { model: "System" },
+                scope: { submoduleName: "GENERADORES", moduleName: "CERTIFICACIONES" },
+                entity: { id: newGenerador._id, model: "Generador" }
+            });
+        } catch (notificationError) {
+            console.error("No se pudo notificar el registro del generador:", notificationError);
+        }
 
         // ── LÓGICA CONDICIONAL DE USUARIO VIA POST ──
         if (usuarioManifestower === true) {

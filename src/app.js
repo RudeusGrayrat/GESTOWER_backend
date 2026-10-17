@@ -19,12 +19,17 @@ const allowedOrigins = [
 ];
 
 const app = express();
+app.set("trust proxy", 1);
 const legacyFileUpload = fileUpload();
 
 // 1. Middlewares Base
 app.use((req, res, next) => {
   // Multer procesa las plantillas; no debe competir con express-fileupload.
-  if (req.path === "/api/plantillas" || req.path.startsWith("/api/plantillas/")) {
+  if (
+    req.path === "/api/plantillas" ||
+    req.path.startsWith("/api/plantillas/") ||
+    /^\/api\/movimientos\/[^/]+\/actas$/.test(req.path)
+  ) {
     return next();
   }
   return legacyFileUpload(req, res, next);

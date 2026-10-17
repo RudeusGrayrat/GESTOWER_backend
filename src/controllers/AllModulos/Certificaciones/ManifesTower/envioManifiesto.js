@@ -3,12 +3,14 @@ const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
+const snapshotFirma = require("../../../../utils/manifiestoFirmaSnapshot");
 
 const enviarManifiesto = async (req, res) => {
     try {
         const { id } = req.params;
         const io = req.app.get("io");
-        const usuarioTransportistaId = req.user?._id;
+        // Identidad declarada; aún no sustituye la autenticación del servidor.
+        const usuarioTransportistaId = req.user?._id || req.body?.usuarioId;
 
         const manifiesto = await Manifiesto.findById(id)
             .populate("generadorId", "razonSocial ruc")
@@ -21,18 +23,23 @@ const enviarManifiesto = async (req, res) => {
         if (manifiesto.estado !== "BORRADOR" && manifiesto.estado !== "OBSERVADO") {
             return res.status(400).json({ message: "Solo se pueden enviar manifiestos en estado BORRADOR u OBSERVADO.", type: "Alerta" });
         }
+        manifiesto.$where = { estado: manifiesto.estado };
 
         // ==========================================
         // 🛡️ VALIDACIÓN DE FIRMA DEL TRANSPORTISTA
         // ==========================================
         const perfilTransportista = await Transportista.findById(manifiesto.transportistaId?._id || manifiesto.transportistaId);
-        const tieneFirmaTransportista = perfilTransportista?.responsables?.some(
-            (resp) => resp.firmaResponsable && resp.firmaResponsable.trim() !== ""
+        const responsablesConFirma = (perfilTransportista?.responsables || []).filter(
+            (resp) => typeof resp.firmaResponsable === "string" && resp.firmaResponsable.trim() !== ""
         );
+        const nombreSeleccionado = manifiesto.referendoEntrega?.responsableEors;
+        const responsableFirmante = nombreSeleccionado
+            ? responsablesConFirma.find((resp) => resp.nombre === nombreSeleccionado)
+            : responsablesConFirma[0];
 
-        if (!tieneFirmaTransportista) {
+        if (!responsableFirmante) {
             return res.status(400).json({
-                message: "No puedes enviar este manifiesto. Tu empresa de transportes no tiene ninguna firma de responsable registrada en el sistema.",
+                message: "No puedes enviar este manifiesto. El responsable del transportista seleccionado no tiene una imagen de firma registrada.",
                 type: "Alerta"
             });
         }
@@ -50,59 +57,52 @@ const enviarManifiesto = async (req, res) => {
             });
         }
 
-        // =================================================================
-        // CAMINO A: POSEE PERMISO DE LLENADO AUTOMÁTICO (Va directo a Tower)
-        // =================================================================
-        if (alianzasB2B.tienePermisoLlenado === true) {
-            manifiesto.estado = "ENVIADO";
-            manifiesto.fechaEnvio = new Date(); // Si manejas este tracking
-            await manifiesto.save();
-
-            // 🔔 NOTIFICACIÓN ERP INTERNO (Submódulo MANIFIESTOS en OPERACIONES)
-            try {
-                await NotificationService.send(io, {
-                    type: "SUBMODULE",
-                    title: `Nuevo Manifiesto Recibido: ${manifiesto.numeroManifiesto}`,
-                    message: `El transportista ${manifiesto.transportistaId?.razonSocial} ha enviado un manifiesto del generador ${manifiesto.generadorId?.razonSocial} para su revisión.`,
-                    creator: {
-                        id: usuarioTransportistaId,
-                        model: "UserExternal"
-                    },
-                    scope: {
-                        submoduleName: "MANIFIESTOS",
-                        moduleName: "OPERACIONES"
-                    },
-                    entity: {
-                        id: manifiesto._id,
-                        model: "Manifiesto"
-                    }
-                });
-            } catch (errNotif) {
-                console.error("⚠️ Error silencioso al notificar al ERP:", errNotif);
-            }
-
-            return res.status(200).json({
-                message: "Manifiesto despachado directamente hacia Tower (Destino).",
-                type: "Correcto",
-                estado: "ENVIADO",
-                data: manifiesto
-            });
+        let firmaTransportista;
+        try {
+            firmaTransportista = await snapshotFirma(responsableFirmante.firmaResponsable);
+        } catch (error) {
+            return res.status(400).json({ message: `No se pudo conservar la firma del transportista: ${error.message}`, type: "Alerta" });
         }
+        const fechaFirma = new Date();
+        manifiesto.referendoEntrega = {
+            ...manifiesto.referendoEntrega?.toObject(),
+            referendo: true,
+            responsableEors: responsableFirmante.nombre,
+            dniResponsableEors: responsableFirmante.dni,
+            cargoResponsableEors: responsableFirmante.cargo,
+            firmaResponsableEors: firmaTransportista,
+            firmaGenerador: "",
+            fechaHora: fechaFirma,
+        };
+        manifiesto.firmadoPorGenerador = undefined;
+        manifiesto.eventosFirma.push({
+            accion: "ENVIO_TRANSPORTISTA",
+            fecha: fechaFirma,
+            actorIdDeclarado: usuarioTransportistaId,
+            actorTipo: "UserExternal",
+            identidadVerificada: !!req.externalUser,
+            responsables: [{ rol: "TRANSPORTISTA", nombre: responsableFirmante.nombre, dni: responsableFirmante.dni, cargo: responsableFirmante.cargo, firma: firmaTransportista }],
+        });
 
-        else {
+        // El permiso de llenado no equivale a consentir una firma ni a omitir
+        // la revisión individual. Se conserva el permiso existente sin usarlo
+        // para despachar directamente mientras se define su alcance.
+        {
             manifiesto.estado = "PENDIENTE";
+            manifiesto.fechaEnvio = fechaFirma;
+            manifiesto.observacion = "";
+            manifiesto.historialRevision.push({ estado: "PENDIENTE", origen: "TRANSPORTISTA", fecha: fechaFirma, actorIdDeclarado: usuarioTransportistaId });
             await manifiesto.save();
 
             // Buscar el usuario administrador/operador del Generador en ManifesTower para enviarle la alerta individual
-            const usuarioClienteDestino = await UserExternal.findOne({
-                generadorId: manifiesto.generadorId?._id || manifiesto.generadorId,
-                roles: "GENERADOR"
-            });
+            let notificacionesPendientes = false;
+            try {
+                const usuariosGenerador = await UserExternal.find({
+                    generadorId: manifiesto.generadorId?._id || manifiesto.generadorId,
+                    roles: "GENERADOR", estado: "ACTIVO"
+                }).select("_id").lean();
 
-            if (usuarioClienteDestino) {
-                // 🔔 NOTIFICACIÓN INDIVIDUAL AL GENERADOR EN MANIFESTOWER
-                try {
-                    await NotificationService.send(io, {
+                const resultados = await Promise.allSettled(usuariosGenerador.map((usuario) => NotificationService.send(io, {
                         type: "INDIVIDUAL",
                         title: "Firma de Manifiesto Pendiente",
                         message: `El transportista ${manifiesto.transportistaId?.razonSocial} ha creado el manifiesto ${manifiesto.numeroManifiesto}. Requiere tu revisión y firma para poder ser enviado a Tower.`,
@@ -112,27 +112,32 @@ const enviarManifiesto = async (req, res) => {
                         },
                         scope: {
                             receiverModel: "UserExternal",
-                            receiverId: usuarioClienteDestino._id
+                            receiverId: usuario._id
                         },
                         entity: {
                             id: manifiesto._id,
                             model: "Manifiesto"
                         }
-                    });
-                } catch (errNotif) {
-                    console.error("⚠️ Error silencioso al notificar de forma individual al Generador:", errNotif);
-                }
+                    })));
+                notificacionesPendientes = !usuariosGenerador.length || resultados.some((resultado) => resultado.status === "rejected");
+            } catch (error) {
+                notificacionesPendientes = true;
+                console.error("No se pudo notificar al generador:", error);
             }
 
             return res.status(200).json({
-                message: "Manifiesto guardado como PENDIENTE. Se ha enviado una solicitud de firma digital a tu cliente.",
+                message: notificacionesPendientes
+                    ? "Manifiesto pendiente de aprobación; no se pudo notificar al generador."
+                    : "Manifiesto enviado al generador para su revisión.",
                 type: "Correcto",
                 estado: "PENDIENTE",
-                data: manifiesto
+                data: manifiesto,
+                notificacionesPendientes,
             });
         }
 
     } catch (error) {
+        if (error.name === "DocumentNotFoundError") return res.status(409).json({ message: "El manifiesto cambió mientras se enviaba. Actualiza la lista.", type: "Advertencia" });
         console.error("❌ Error catastrófico en enviarManifiesto:", error);
         return res.status(500).json({ message: "Error interno del servidor al procesar el envío.", type: "Error" });
     }

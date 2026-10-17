@@ -22,6 +22,10 @@ const stockSchema = new Schema(
     item: Number,
     pesoNeto: String,
     pesoBruto: String,
+    subItem: {
+      type: String,
+      enum: ["1.1", "1.2", "1.3"],
+    },
     unidadDeMedida: String,
 
 
@@ -87,6 +91,7 @@ const stockSchema = new Schema(
   { timestamps: true }
 );
 stockSchema.index({ contratoId: 1 });
+stockSchema.index({ sedeId: 1, contratoId: 1, subItem: 1 });
 stockSchema.index({ ubicado: 1 });
 stockSchema.index({ bienId: 1 });
 module.exports = mongoose.model("Stock", stockSchema);

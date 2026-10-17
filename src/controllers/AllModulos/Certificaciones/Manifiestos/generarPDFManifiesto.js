@@ -36,6 +36,10 @@ const generarPDFManifiesto = async (req, res) => {
         };
         const check = (condition) => condition ? 'X' : '';
         const fechaFormat = (fecha) => fecha ? dayjs(fecha).format("DD/MM/YYYY") : "";
+        const fechaHoraPeru = (fecha) => fecha ? new Intl.DateTimeFormat("es-PE", {
+            timeZone: "America/Lima", day: "2-digit", month: "2-digit", year: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: false,
+        }).format(new Date(fecha)) : "";
         const generador = findManifiesto?.generadorId || {};
         const planta = findManifiesto?.planta || {};
         const responsableGestion = findManifiesto?.responsableGestion || {};
@@ -166,12 +170,12 @@ const generarPDFManifiesto = async (req, res) => {
             firma_transportista: safe(referendoEntrega.firmaResponsableEors),
             dni_transportista_firma: safe(referendoEntrega.dniResponsableEors),
             cargo_transportista_firma: safe(referendoEntrega.cargoResponsableEors),
-            fecha_hora_entrega: fechaFormat(referendoEntrega.fechaHora),
+            fecha_hora_entrega: fechaHoraPeru(referendoEntrega.fechaHora),
 
             // ===== DESTINO (tipo de manejo) =====
             tratamiento: check(destinoFinal.tipoManejo === 'TRATAMIENTO'),
             valorizacion: check((destinoFinal.tipoManejo === "VALORIZACIÓN" || destinoFinal.tipoManejo === "VALORIZACION")),
-            disposicion_final: check(destinoFinal.tipoManejo === 'DISPOSICION FINAL'),
+            disposicion_final: check(["DISPOSICION FINAL", "DISPOSICIÓN FINAL", "DISPOSICION_FINAL"].includes(destinoFinal.tipoManejo)),
 
             razon_social_destino: safe(destino.razonSocial),
             ruc_destino: safe(destino.ruc),
@@ -195,7 +199,7 @@ const generarPDFManifiesto = async (req, res) => {
             firma_destino: safe(referendoRecepcion.firmaGenerador), // el campo se llama firmaGenerador en el modelo
             dni_destino_firma: safe(referendoRecepcion.dniResponsableEorsDestino),
             cargo_destino_firma: safe(referendoRecepcion.cargoResponsableEorsDestino),
-            fecha_hora_recepcion: fechaFormat(referendoRecepcion.fechaHora),
+            fecha_hora_recepcion: fechaHoraPeru(referendoRecepcion.fechaReferendo),
 
             // ===== 3.3 OTROS (objeto otrosManejos) =====
             otros_comercializacion: check(otrosManejos.comercializacion),
@@ -230,11 +234,10 @@ const generarPDFManifiesto = async (req, res) => {
 
             missingKey: "N/A"
         };
-        let archivo = "PLANTILLA_MANIFIESTO_WORD_PENDIENTE.docx"
+        const archivo = findManifiesto.estado === "APROBADO"
+            ? "PLANTILLA_MANIFIESTO_WORD.docx"
+            : "PLANTILLA_MANIFIESTO_WORD_PENDIENTE.docx";
         const templatePath = path.join(rootPath, "templates", archivo);
-        if (findManifiesto.estado === "APROBADO") {
-            archivo = "PLANTILLA_MANIFIESTO_WORD.docx"
-        }
         const docxWord = await convertDocx(dataDocx, templatePath)
         const convert = await convertToPdf(docxWord);
 

@@ -156,6 +156,7 @@ const convertDocx = async (predata, templatePath, options = {}) => {
                 if (tagName === "logo_empresa") return calcularTamanoProporcional(imageData, 506, 238);
                 if (tagName === "logo_encabezado") return calcularTamanoProporcional(imageData, 108, 48);
                 if (tagName === "firma") return calcularTamanoProporcional(imageData, 106, 72);
+                if (tagName.startsWith("firma_")) return calcularTamanoProporcional(imageData, 106, 60);
                 if (tagName === "url_imagen") return [180, 130];
                 return [100, 100]; // Tamaño por defecto
             },

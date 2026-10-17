@@ -3,6 +3,7 @@ const Ubigeo = require("../../../../models/AllModulos/Certificacion/Ubigeo");
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
+const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
 const patchTransportista = async (req, res) => {
     const uploadedPublicIds = [];
@@ -79,6 +80,19 @@ const patchTransportista = async (req, res) => {
 
         // Guardamos los cambios principales en la colección de Transportistas
         const updatedTransportista = await findTransportista.save();
+
+        try {
+            await NotificationService.send(req.app.get("io"), {
+                type: "SUBMODULE",
+                title: "Transportista Actualizado",
+                message: `Se actualizaron los datos del transportista ${updatedTransportista.razonSocial} (RUC: ${updatedTransportista.ruc}).`,
+                creator: { model: "System" },
+                scope: { submoduleName: "TRANSPORTISTAS", moduleName: "CERTIFICACIONES" },
+                entity: { id: updatedTransportista._id, model: "Transportista" }
+            });
+        } catch (notificationError) {
+            console.error("No se pudo notificar la actualización del transportista:", notificationError);
+        }
 
         // ── LÓGICA ESPEJO DE CONTROL DE USUARIO EN PATCH ──
         if (usuarioManifestower === true) {

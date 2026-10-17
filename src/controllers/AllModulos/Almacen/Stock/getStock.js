@@ -6,7 +6,7 @@ const Employee = require("../../../../models/Employees/Employee");
 
 const getStockAlmacen = async (req, res) => {
   try {
-    const { page = 0, limit = 10, search = "" } = req.query;
+    const { page = 0, limit = 10, search = "", sedeId, contratoId, subItem } = req.query;
 
     const skip = Number(page) * Number(limit);
     const lim = Number(limit);
@@ -51,6 +51,9 @@ const getStockAlmacen = async (req, res) => {
         }
       ],
     };
+    if (sedeId) query.sedeId = sedeId;
+    if (contratoId) query.contratoId = contratoId;
+    if (subItem && subItem !== "TODOS") query.subItem = subItem;
 
     const [raw_data, total] = await Promise.all([
       StockAlmacen.find(query)
@@ -88,6 +91,7 @@ const getStockAlmacen = async (req, res) => {
         // Agregamos estos campos que vienen del nuevo Schema
         pesoNeto: stock.pesoNeto || 0,
         pesoBruto: stock.pesoBruto || 0,
+        subItem: stock.subItem || "N/A",
         unidadDeMedida: stock.unidadDeMedida || "UNIDAD",
         // -------------------------------------------
         historial: stock.historial || [],

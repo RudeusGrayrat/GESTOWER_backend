@@ -28,9 +28,7 @@ const getManifiestoPagination = async (req, res) => {
 
         // Búsqueda previa del usuario externo para identificar sus empresas vinculadas
         if (usuario) {
-            console.log("Usuario recibido:", usuario, "Rol activo:", rolActivo);
             const findUser = await UserExternal.findById(usuario).lean();
-            console.log("Usuario encontrado:", findUser);
             if (!findUser) {
                 return res.status(404).json({ message: "Usuario no encontrado" });
             }
@@ -40,11 +38,10 @@ const getManifiestoPagination = async (req, res) => {
                 if (!findUser.generadorId) {
                     return res.json({ data: [], total: 0 });
                 }
-                console.log("Generador ID del usuario:", findUser.generadorId);
 
                 andConditions.push({
                     generadorId: findUser.generadorId,
-                    //estado: { $ne: "BORRADOR" } // Opcional: El generador solo ve lo aprobado o en revisión, no borradores del transportista
+                    estado: { $ne: "BORRADOR" }
                 });
             }
             else if (rolActivo === "TRANSPORTISTA") {

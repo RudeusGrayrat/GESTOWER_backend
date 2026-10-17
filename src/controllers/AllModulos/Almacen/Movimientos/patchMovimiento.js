@@ -24,7 +24,9 @@ const patchMovimiento = async (req, res) => {
     datosGenerales,
     descripcionBienes,
     detallesDePeso,
+    detallePeso,
     observaciones,
+    detalleObservaciones,
     horaSalida,
     fechaSalida,
     contratoId,
@@ -60,7 +62,8 @@ const patchMovimiento = async (req, res) => {
       // 2. Procesar el nuevo Array consolidado
       const deFinales = [];
       for (let i = 0; i < referenciaImagen.length; i++) {
-        const img = referenciaImagen[i];
+        const rawImage = referenciaImagen[i];
+        const img = typeof rawImage === "object" ? rawImage.fileData : rawImage;
 
         if (img && img.startsWith("data:image")) {
           // Nueva imagen en Base64 -> Subir a Cloudinary
@@ -86,7 +89,9 @@ const patchMovimiento = async (req, res) => {
     if (contribuyente !== undefined) movPrevio.contribuyente = contribuyente;
     if (numeroDocumento !== undefined) movPrevio.numeroDocumento = numeroDocumento;
     if (detallesDePeso !== undefined) movPrevio.detallesDePeso = detallesDePeso;
+    if (detallePeso !== undefined) movPrevio.detallePeso = detallePeso;
     if (observaciones !== undefined) movPrevio.observaciones = observaciones;
+    if (detalleObservaciones !== undefined) movPrevio.detalleObservaciones = detalleObservaciones;
     if (horaSalida !== undefined) movPrevio.horaSalida = horaSalida;
     if (fechaSalida !== undefined) movPrevio.fechaSalida = fechaSalida;
     if (contratoId !== undefined) movPrevio.contratoId = contratoId;
@@ -135,6 +140,7 @@ const patchMovimiento = async (req, res) => {
           descripcion: bien.descripcion,
           pesoNeto: bien.pesoNeto,
           pesoBruto: bien.pesoBruto,
+          subItem: bien.subItem,
           unidadDeMedida: bien.unidadDeMedida,
           cantidadTotal: bien.cantidadIngresada,
           cantidadDisponible: bien.cantidadIngresada,

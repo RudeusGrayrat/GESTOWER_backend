@@ -92,6 +92,11 @@ const getAsistenciaByParams = require("../controllers/AllModulos/RecursosHumanos
 const getStockProductoUbicacion = require("../controllers/AllModulos/Almacen/Stock/getStockProductoUbicacion");
 const patchStockAlmacen = require("../controllers/AllModulos/Almacen/Stock/patchStock");
 const patchMovimiento = require("../controllers/AllModulos/Almacen/Movimientos/patchMovimiento");
+const postActasMovimiento = require("../controllers/AllModulos/Almacen/Movimientos/postActasMovimiento");
+const postComentarioMovimiento = require("../controllers/AllModulos/Almacen/Movimientos/postComentarioMovimiento");
+const patchPesoAprobado = require("../controllers/AllModulos/Almacen/Movimientos/patchPesoAprobado");
+const tienePermisoLurin = require("../controllers/AllModulos/Almacen/Movimientos/middlewarePermisoLurin");
+const { uploadActasMovimiento } = require("../utils/movimientoActaStorage");
 const getBoletaDePagoByParams = require("../controllers/AllModulos/RecursosHumanos/BoletaDePagos/getBoletaDePagoByParams");
 const getEmployeeByParams = require("../controllers/Employee/getEmployeeByParam");
 const getZonasByParams = require("../controllers/AllModulos/Almacen/Ubicacion/getZonaByParams");
@@ -141,12 +146,15 @@ router.post("/returnPdf", returnPdf);
 router.post("/postContratoAlmacen", postContratoAlmacen);
 router.post("/postSedesAlmacen", postSedesAlmacen);
 router.post("/postMovimientoAlmacen", createMovimiento);
+router.post("/movimientos/:movimientoId/actas", tokenVerify, tienePermisoLurin("CREAR", "OBSERVAR", "EDITAR", "APROBAR"), uploadActasMovimiento.array("actas", 10), postActasMovimiento);
+router.post("/postComentarioMovimiento", tokenVerify, tienePermisoLurin("OBSERVAR"), postComentarioMovimiento);
 router.post("/postNavesAlmacen", postAlmacen);
 router.post("/postZonaAlmacen", postZonaAlmacen);
 router.post("/postUbicacionProducto", postUbicacion);
 router.post("/postStockAlmacen", postStockAlmacen);
 
 router.patch("/patchMovimientoAlmacen", patchMovimiento);
+router.patch("/corregirPesoMovimiento", tokenVerify, tienePermisoLurin("CORREGIR_PESO"), patchPesoAprobado);
 router.patch("/patchStockAlmacen", patchStockAlmacen);
 router.patch("/patchUbicacionProducto", patchUbicacion);
 router.patch("/patchNavesAlmacen", deleteNaveAlmacen);

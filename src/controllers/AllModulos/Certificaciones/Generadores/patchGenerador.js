@@ -2,6 +2,8 @@ const Generador = require("../../../../models/AllModulos/Certificacion/Generador
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
+const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
+const cleanBase64 = require("../../../../utils/cleanBase64");
 
 const patchGenerador = async (req, res) => {
     const uploadedPublicIds = [];
@@ -28,7 +30,7 @@ const patchGenerador = async (req, res) => {
         if (ruc) findGenerador.ruc = ruc;
         if (correoElectronico) findGenerador.correoElectronico = correoElectronico;
         if (telefono) findGenerador.telefono = telefono;
-        if (representanteLegal) findGenerador.representanteLegal = representativeLegal;
+        if (representanteLegal) findGenerador.representanteLegal = representanteLegal;
         if (dniRepresentante) findGenerador.dniRepresentante = dniRepresentante;
         if (plantas) findGenerador.plantas = plantas;
         if (estado) findGenerador.estado = estado;
@@ -38,16 +40,17 @@ const patchGenerador = async (req, res) => {
         if (responsablesTecnicos) {
             const responsablesActualizados = await Promise.all(
                 responsablesTecnicos.map(async (responsable) => {
+                    const responsableAnterior = findGenerador.responsablesTecnicos.find((r) => r.dniResponsable === responsable.dniResponsable);
+                    if (responsableAnterior?.firmaResponsable === responsable.firmaResponsable) return responsable;
                     const esBase64 = responsable.firmaResponsable && !responsable.firmaResponsable.startsWith("http");
                     if (!esBase64) return responsable;
 
-                    const responsableAnterior = findGenerador.responsablesTecnicos.find((r) => r.dniResponsable === responsable.dniResponsable);
-                    if (responsableAnterior?.firmaResponsable) {
+                    if (responsableAnterior?.firmaResponsable?.startsWith("https://res.cloudinary.com/")) {
                         const oldPublicId = extractPublicId(responsableAnterior.firmaResponsable);
                         await deleteImage(oldPublicId);
                     }
 
-                    const fileBuffer = Buffer.from(responsable.firmaResponsable, "base64");
+                    const fileBuffer = Buffer.from(cleanBase64(responsable.firmaResponsable), "base64");
                     const fileName = `firma_responsable_${responsable.dniResponsable}`;
                     const result = await uploadImage(fileBuffer, fileName);
                     uploadedPublicIds.push(extractPublicId(result.secure_url));
@@ -59,6 +62,19 @@ const patchGenerador = async (req, res) => {
         }
 
         const updatedGenerador = await findGenerador.save();
+
+        try {
+            await NotificationService.send(req.app.get("io"), {
+                type: "SUBMODULE",
+                title: "Generador Actualizado",
+                message: `Se actualizaron los datos del generador ${updatedGenerador.razonSocial} (RUC: ${updatedGenerador.ruc}).`,
+                creator: { model: "System" },
+                scope: { submoduleName: "GENERADORES", moduleName: "CERTIFICACIONES" },
+                entity: { id: updatedGenerador._id, model: "Generador" }
+            });
+        } catch (notificationError) {
+            console.error("No se pudo notificar la actualización del generador:", notificationError);
+        }
 
         // ── LÓGICA DE CONTROL DE USUARIO EN PATCH ──
         if (usuarioManifestower === true) {

@@ -54,10 +54,48 @@ const movimientoSchema = new Schema(
     },
     descripcionBienes: [descripcionBienesSchema],
     detallesDePeso: String,
+    detallePeso: {
+      texto: { type: String, default: "" },
+      filas: [{
+        concepto: { type: String, default: "" },
+        pesoNeto: { type: Number },
+        pesoBruto: { type: Number },
+        observacion: { type: String, default: "" },
+      }],
+    },
     referenciaImagen: [{
       type: String,
     }],
     observaciones: String,
+    detalleObservaciones: {
+      texto: { type: String, default: "" },
+      filas: [{
+        asunto: { type: String, default: "" },
+        descripcion: { type: String, default: "" },
+      }],
+    },
+    actasEscaneadas: [{
+      nombre: { type: String, required: true },
+      mimeType: { type: String, required: true },
+      url: { type: String, required: true },
+      subidoPor: { type: Schema.Types.ObjectId, ref: "Employee" },
+      fecha: { type: Date, default: Date.now },
+    }],
+    comentarios: [{
+      texto: { type: String, required: true },
+      creadoPor: { type: Schema.Types.ObjectId, ref: "Employee", required: true },
+      fecha: { type: Date, default: Date.now },
+    }],
+    historialCambiosPeso: [{
+      bienId: { type: Schema.Types.ObjectId, required: true },
+      pesoNetoAnterior: Number,
+      pesoNetoNuevo: Number,
+      pesoBrutoAnterior: Number,
+      pesoBrutoNuevo: Number,
+      justificacion: { type: String, required: true },
+      corregidoPor: { type: Schema.Types.ObjectId, ref: "Employee", required: true },
+      fecha: { type: Date, default: Date.now },
+    }],
     horaSalida: String,
     fechaSalida: String,
     contratoId: {

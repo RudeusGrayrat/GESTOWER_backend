@@ -31,92 +31,71 @@ const patchManifiesto = async (req, res) => {
         const findManifiesto = await Manifiesto.findById(manifiestoId);
         if (!findManifiesto) return res.status(404).json({ message: "Manifiesto no encontrado", type: "Error" });
 
-        // Solo permitir actualización si el estado es "PENDIENTE"
-        if (findManifiesto.estado !== "PENDIENTE") {
-            return res.status(400).json({ message: "Solo se pueden editar manifiestos en estado PENDIENTE", type: "Advertencia" });
+        if (!["BORRADOR", "OBSERVADO"].includes(findManifiesto.estado)) {
+            return res.status(400).json({ message: "Solo se pueden editar manifiestos en borrador u observados.", type: "Advertencia" });
         }
-        if (estado && !["PENDIENTE", "APROBADO", "RECHAZADO", "SUBSANADO"].includes(estado)) {
-            return res.status(400).json({
-                message: "Estado inválido. Los estados permitidos son: PENDIENTE, APROBADO, RECHAZADO, SUBSANADO",
-            })
+        findManifiesto.$where = { estado: findManifiesto.estado };
+        if (estado && estado !== findManifiesto.estado) {
+            return res.status(400).json({ message: "El estado se cambia mediante las acciones de envío y revisión.", type: "Advertencia" });
         }
-        if (estado === "APROBADO" && !aprobadoPor) {
-            return res.status(400).json({
-                message: "El campo aprobadoPor es obligatorio cuando el estado es APROBADO",
-                type: "Error"
-            });
+        if (transporte?.fechaRecepcion) {
+            const fecha = String(transporte.fechaRecepcion).slice(0, 10);
+            const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || Number.isNaN(Date.parse(fecha)) || fecha < hoy) {
+                return res.status(400).json({ message: "La fecha de recepción debe ser hoy o una fecha futura.", type: "Advertencia" });
+            }
         }
-        if (estado === "RECHAZADO" && !rechazadoPor) {
-            return res.status(400).json({
-                message: "El campo rechazadoPor es obligatorio cuando el estado es RECHAZADO",
-                type: "Error"
-            });
-        }
-        if (estado === "SUBSANADO" && !subsanadoPor) {
-            return res.status(400).json({
-                message: "El campo subsanadoPor es obligatorio cuando el estado es SUBSANADO",
-                type: "Error"
-            });
-        }
+        const plano = (value) => value?.toObject ? value.toObject() : (value || {});
 
         if (año) findManifiesto.año = año;
         if (mes) findManifiesto.mes = mes;
         if (generadorId) findManifiesto.generadorId = generadorId;
         if (responsableGestion) findManifiesto.responsableGestion = {
-            ...findManifiesto.responsableGestion,
+            ...plano(findManifiesto.responsableGestion),
             ...responsableGestion
         }
         if (planta) {
-            console.log("Planta actual:", findManifiesto.planta);
-            console.log("Datos recibidos para planta:", planta);
             findManifiesto.planta = {
-                ...findManifiesto.planta,
-                ...planta
+                ...plano(findManifiesto.planta),
+                ...planta,
+                ...(planta.coordenadasUtm ? { coordenadasUtm: {
+                    ...plano(findManifiesto.planta?.coordenadasUtm),
+                    ...planta.coordenadasUtm
+                } } : {})
             }
         }
         if (residuo) findManifiesto.residuo = {
-            ...findManifiesto.residuo,
+            ...plano(findManifiesto.residuo),
             ...residuo
         }
         if (peligrosidad) findManifiesto.peligrosidad = {
-            ...findManifiesto.peligrosidad,
+            ...plano(findManifiesto.peligrosidad),
             ...peligrosidad
         }
         if (transportistaId) findManifiesto.transportistaId = transportistaId;
         if (transporte) findManifiesto.transporte = {
-            ...findManifiesto.transporte,
+            ...plano(findManifiesto.transporte),
             ...transporte
         }
-        if (referendoEntrega) findManifiesto.referendoEntrega = {
-            ...findManifiesto.referendoEntrega,
-            ...referendoEntrega
-        }
-        if (destinoId) findManifiesto.destinoId = destinoId;
+        // Solo se conserva la elección de responsables: las firmas se registran
+        // en las acciones de envío y aprobación, nunca desde el formulario.
+        const entregaAnterior = plano(findManifiesto.referendoEntrega);
+        findManifiesto.referendoEntrega = {
+            referendo: false,
+            generadorResponsableManejo: referendoEntrega?.generadorResponsableManejo ?? entregaAnterior.generadorResponsableManejo,
+            responsableEors: referendoEntrega?.responsableEors ?? entregaAnterior.responsableEors,
+        };
+        findManifiesto.firmadoPorGenerador = undefined;
+        findManifiesto.fechaEnvio = undefined;
         if (destinoFinal) findManifiesto.destinoFinal = {
-            ...findManifiesto.destinoFinal,
+            ...plano(findManifiesto.destinoFinal),
             ...destinoFinal
         }
-        if (referendoRecepcion) findManifiesto.referendoRecepcion = {
-            ...findManifiesto.referendoRecepcion,
-            ...referendoRecepcion
-        }
         if (otrosManejos) findManifiesto.otrosManejos = {
-            ...findManifiesto.otrosManejos,
+            ...plano(findManifiesto.otrosManejos),
             ...otrosManejos
         }
-        if (otrasObligaciones) {
-            findManifiesto.otrasObligaciones = {
-                ...findManifiesto.otrasObligaciones,
-                ...otrasObligaciones
-            }
-        }
-        if (estado) findManifiesto.estado = estado;
-        if (aprobadoPor) findManifiesto.aprobadoPor = aprobadoPor;
-        if (modificadoPor) findManifiesto.modificadoPor = modificadoPor;
-        if (rechazadoPor) findManifiesto.rechazadoPor = rechazadoPor;
-        if (subsanadoPor) findManifiesto.subsanadoPor = subsanadoPor;
-        if (observacion) findManifiesto.observacion = observacion;
-        if (observadoPor) findManifiesto.observadoPor = observadoPor;
+        findManifiesto.modificadoPor = req.externalUser?._id || req.user?._id;
         await findManifiesto.save();
 
         return res.json({
@@ -128,6 +107,7 @@ const patchManifiesto = async (req, res) => {
 
 
     } catch (error) {
+        if (error.name === "DocumentNotFoundError") return res.status(409).json({ message: "El manifiesto cambió mientras lo editabas. Actualiza la lista e inténtalo nuevamente.", type: "Advertencia" });
         console.error("Error en patchManifiesto:", error);
         return res.status(500).json({ message: error.message || "Error al actualizar el manifiesto", type: "Error" });
     }

@@ -50,7 +50,8 @@ const manifiestoSchema = new mongoose.Schema(
             estadoFisico: { type: String, enum: ['SOLIDO', 'SEMISOLIDO', 'LIQUIDO', 'GAS'], required: true },
             tipoRecipiente: { type: String },
             materialRecipiente: { type: String },
-            numeroRecipientes: { type: Number, default: 1 },
+            // Puede incluir la unidad o el tipo de envase (ej. "12 BIDONES").
+            numeroRecipientes: { type: String, default: "1" },
             codigoBasilea: { type: String },
             subcodigoBasilea: { type: String },
             informacionAdicional: { type: String }
@@ -141,6 +142,32 @@ const manifiestoSchema = new mongoose.Schema(
             fecha: Date,
             hora: String
         },
+
+        // El actor es declarado por el cliente hasta que se protejan estas rutas.
+        // No confundir este registro operacional con una firma digital certificada.
+        eventosFirma: [{
+            accion: { type: String, required: true },
+            fecha: { type: Date, required: true },
+            actorIdDeclarado: { type: mongoose.Schema.Types.ObjectId },
+            actorTipo: { type: String },
+            identidadVerificada: { type: Boolean, default: false },
+            responsables: [{
+                rol: String,
+                nombre: String,
+                dni: String,
+                cargo: String,
+                firma: String,
+            }],
+        }],
+        historialRevision: [{
+            estado: { type: String, required: true },
+            observacion: { type: String, default: "" },
+            origen: { type: String, enum: ["GENERADOR", "DESTINO", "TRANSPORTISTA"], required: true },
+            fecha: { type: Date, default: Date.now },
+            actorIdDeclarado: { type: mongoose.Schema.Types.ObjectId },
+        }],
+        fechaEnvio: Date,
+        firmadoPorGenerador: { type: mongoose.Schema.Types.ObjectId, ref: 'UserExternal' },
 
         // Metadatos
         creadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },

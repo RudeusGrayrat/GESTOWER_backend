@@ -4,6 +4,7 @@ const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const cleanBase64 = require("../../../../utils/cleanBase64");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
+const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
 const postTransportista = async (req, res) => {
     // Array para almacenar los publicIds de las imágenes subidas y borrar en caso de rollback
@@ -95,6 +96,19 @@ const postTransportista = async (req, res) => {
         });
 
         await newTransportista.save();
+
+        try {
+            await NotificationService.send(req.app.get("io"), {
+                type: "SUBMODULE",
+                title: "Nuevo Transportista Registrado",
+                message: `Se registró el transportista ${newTransportista.razonSocial} (RUC: ${newTransportista.ruc}).`,
+                creator: { model: "System" },
+                scope: { submoduleName: "TRANSPORTISTAS", moduleName: "CERTIFICACIONES" },
+                entity: { id: newTransportista._id, model: "Transportista" }
+            });
+        } catch (notificationError) {
+            console.error("No se pudo notificar el registro del transportista:", notificationError);
+        }
 
         // 6. LÓGICA CONDICIONAL DE USUARIO (UserExternal)
         if (crearUsuario === true) {
