@@ -29,15 +29,18 @@ manifesTower.patch("/aprobarManifiestoGenerador/:id", autenticarExterno, autoriz
 manifesTower.patch("/observarManifiestoGenerador/:id", autenticarExterno, autorizarAccionManifiesto("GENERADOR"), observarManifiestoGenerador);
 manifesTower.patch("/patchUserExternal", autenticarExterno, patchUserExternal)
 
-manifesTower.post("/postVinculacion", postVinvulacion)
+manifesTower.post("/postVinculacion", solicitudGenerador.autenticarTransportista, postVinvulacion)
 manifesTower.post("/enviarManifiesto/:id", autenticarExterno, autorizarAccionManifiesto("TRANSPORTISTA"), enviarManifiesto)
 
 manifesTower.post("/solicitudes-generador", solicitudGenerador.autenticarTransportista, solicitudGenerador.crear);
 manifesTower.get("/mis-solicitudes-generador", solicitudGenerador.autenticarTransportista, solicitudGenerador.listarPropias);
 manifesTower.post("/mis-solicitudes-generador/:id/renovar", solicitudGenerador.autenticarTransportista, solicitudGenerador.renovar);
+manifesTower.post("/generadores/:id/enlace-acceso", solicitudGenerador.autenticarTransportista, solicitudGenerador.generarEnlaceAcceso);
 manifesTower.get("/mi-generador", solicitudGenerador.autenticarGenerador, solicitudGenerador.miGenerador);
 manifesTower.post("/invitacion-generador/consultar", solicitudGenerador.consultarInvitacion);
 manifesTower.post("/invitacion-generador/completar", solicitudGenerador.completar);
+manifesTower.post("/enlace-acceso-generador/consultar", solicitudGenerador.consultarEnlaceAcceso);
+manifesTower.post("/enlace-acceso-generador/completar", solicitudGenerador.completarEnlaceAcceso);
 manifesTower.post("/invitacion-generador/recuperar-codigo", solicitudGenerador.recuperarCodigo);
 manifesTower.get("/solicitudes-generador", tokenVerify, solicitudGenerador.permisoGeneradores("VER"), solicitudGenerador.listar);
 manifesTower.post("/solicitudes-generador/:id/aprobar", tokenVerify, solicitudGenerador.permisoGeneradores("APROBAR"), solicitudGenerador.aprobar);

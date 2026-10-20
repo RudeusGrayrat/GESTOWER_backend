@@ -30,7 +30,9 @@ const userExternalSchema = new mongoose.Schema(
             type: String,
             enum: ["ACTIVO", "INACTIVO"],
             default: "ACTIVO",
-        }
+        },
+        enlaceAccesoHash: { type: String, select: false },
+        enlaceAccesoExpira: { type: Date, select: false },
     },
     { timestamps: true }
 );

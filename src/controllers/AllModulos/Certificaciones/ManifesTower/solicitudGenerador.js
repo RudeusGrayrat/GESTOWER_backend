@@ -67,18 +67,80 @@ const notificarRevision = async (req, solicitud, detalle) => {
     } catch (error) { console.error("No se pudo notificar la solicitud:", error.message); return true; }
 };
 
+// Un transportista puede iniciar la relación con un generador existente, pero
+// jamás indicar por el navegador qué transportista representa. Ese dato sale
+// exclusivamente de la sesión autenticada.
+const solicitarVinculacionExistente = async (req, generadorId) => {
+    if (!mongoose.isValidObjectId(generadorId)) {
+        const error = new Error("GENERADOR_INVALIDO"); error.status = 400; throw error;
+    }
+    const generador = await Generador.findById(generadorId).select("razonSocial ruc").lean();
+    if (!generador) {
+        const error = new Error("GENERADOR_NO_ENCONTRADO"); error.status = 404; throw error;
+    }
+    const transportistaId = req.usuarioTransportista?.transportistaId;
+    if (!transportistaId) {
+        const error = new Error("TRANSPORTISTA_NO_DISPONIBLE"); error.status = 403; throw error;
+    }
+    const existente = await Vinculacion.findOne({
+        generadorId: generador._id,
+        transportistaId,
+        status: { $in: ["PENDIENTE", "ACEPTADA"] },
+        fechaDesvinculacion: null,
+    });
+    if (existente) {
+        const error = new Error("VINCULACION_EXISTENTE"); error.status = 409; throw error;
+    }
+    const vinculacion = await Vinculacion.create({
+        generadorId: generador._id,
+        transportistaId,
+        iniciadoPor: "TRANSPORTISTA",
+        status: "PENDIENTE",
+    });
+    let notificacionPendiente = false;
+    try {
+        const destinatarios = await UserExternal.find({ generadorId: generador._id, roles: "GENERADOR", estado: "ACTIVO" }).select("_id").lean();
+        const entregas = await Promise.allSettled(destinatarios.map((usuario) => NotificationService.send(req.app.get("io"), {
+            type: "INDIVIDUAL",
+            title: "Solicitud de vinculación",
+            message: "Un transportista solicitó vincularse con tu empresa. Revisa la solicitud antes de autorizarla.",
+            creator: { id: req.usuarioTransportista._id, model: "UserExternal" },
+            scope: { receiverModel: "UserExternal", receiverId: usuario._id },
+            entity: { id: vinculacion._id, model: "Vinculacion" },
+        })));
+        notificacionPendiente = !destinatarios.length || entregas.some((entrega) => entrega.status === "rejected");
+    } catch (error) {
+        console.error("No se pudo notificar la vinculación:", error.message);
+        notificacionPendiente = true;
+    }
+    return { vinculacion, generador, notificacionPendiente };
+};
+
 const crear = async (req, res) => {
     res.set("Cache-Control", "no-store");
     try {
         const ruc = typeof req.body.ruc === "string" ? req.body.ruc.trim() : "", razonSocial = texto(req.body.razonSocial);
         const correoElectronico = texto(req.body.correoElectronico).toLowerCase(), telefono = texto(req.body.telefono, 30);
         if (!/^\d{11}$/.test(ruc) || !razonSocial || !emailValido(correoElectronico) || !telefono) return res.status(400).json({ message: "Completa razón social, RUC de 11 dígitos, correo y teléfono válidos." });
-        if (await Generador.exists({ ruc }) || await UserExternal.exists({ ruc })) return res.status(409).json({ message: "El RUC ya tiene una empresa o cuenta registrada. Solicita su vinculación o contacta a Tower." });
+        const generadorExistente = await Generador.findOne({ ruc }).select("_id").lean();
+        if (generadorExistente) {
+            const resultado = await solicitarVinculacionExistente(req, generadorExistente._id);
+            return res.json({
+                message: resultado.notificacionPendiente
+                    ? "El generador ya existe. Se registró la solicitud de vinculación, pero su cuenta no pudo ser notificada."
+                    : "El generador ya existe. Se envió la solicitud de vinculación.",
+                modo: "VINCULACION",
+                data: resultado.vinculacion,
+                notificacionPendiente: resultado.notificacionPendiente,
+            });
+        }
+        if (await UserExternal.exists({ ruc })) return res.status(409).json({ message: "El RUC ya tiene una cuenta registrada y requiere revisión de Tower." });
         const token = crypto.randomBytes(32).toString("base64url");
         const solicitud = await Solicitud.create({ ruc, razonSocial, correoElectronico, telefono, transportistaId: req.usuarioTransportista.transportistaId, creadoPor: req.usuarioTransportista._id, invitacionHash: hashToken(token), invitacionExpira: new Date(Date.now() + 72 * 60 * 60 * 1000) });
         const notificacionPendiente = await notificarRevision(req, solicitud, "se inició una ficha provisional; falta que el generador complete sus datos.");
         return res.status(201).json({ message: "Solicitud provisional creada. Comparte el enlace con el generador.", token, expira: solicitud.invitacionExpira, notificacionPendiente });
     } catch (error) {
+        if (error.message === "VINCULACION_EXISTENTE") return res.status(409).json({ message: "Ya existe una solicitud pendiente o una vinculación activa con este generador." });
         if (error.code === 11000) return res.status(409).json({ message: "Ya existe una solicitud para este RUC. Contacta a Tower para revisarla." });
         console.error("Error al crear solicitud:", error); return res.status(500).json({ message: "No se pudo crear la solicitud." });
     }
@@ -110,6 +172,49 @@ const consultarInvitacion = async (req, res) => {
         if (!solicitud) return res.status(404).json({ message: "El enlace no es válido, ya fue utilizado o ha vencido." });
         return res.json({ razonSocial: solicitud.razonSocial, ruc: solicitud.ruc, correoElectronico: solicitud.correoElectronico, telefono: solicitud.telefono, transportista: solicitud.transportistaId });
     } catch (error) { return res.status(500).json({ message: "No se pudo consultar la invitación." }); }
+};
+
+const generarEnlaceAcceso = async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    try {
+        const generadorId = req.params.id;
+        if (!mongoose.isValidObjectId(generadorId)) return res.status(400).json({ message: "El generador seleccionado no es válido." });
+        const vinculo = await Vinculacion.exists({ generadorId, transportistaId: req.usuarioTransportista.transportistaId, status: "ACEPTADA", fechaDesvinculacion: null });
+        if (!vinculo) return res.status(403).json({ message: "Solo puedes generar un enlace para un generador con vínculo activo." });
+        const generador = await Generador.findById(generadorId).select("razonSocial ruc").lean();
+        const usuario = await UserExternal.findOne({ generadorId, roles: "GENERADOR", estado: "ACTIVO" }).select("_id");
+        if (!generador || !usuario) return res.status(404).json({ message: "El generador no tiene una cuenta activa para restablecer el acceso." });
+        const token = crypto.randomBytes(32).toString("base64url");
+        const expira = new Date(Date.now() + 72 * 60 * 60 * 1000);
+        await UserExternal.updateOne({ _id: usuario._id }, { $set: { enlaceAccesoHash: hashToken(token), enlaceAccesoExpira: expira } });
+        return res.json({ message: `Enlace de acceso generado para ${generador.razonSocial}.`, token, expira });
+    } catch (error) {
+        console.error("Error al generar enlace de acceso:", error.message);
+        return res.status(500).json({ message: "No se pudo generar el enlace de acceso." });
+    }
+};
+
+const consultarEnlaceAcceso = async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    const token = req.body.token;
+    if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) return res.status(404).json({ message: "El enlace no es válido o ha vencido." });
+    try {
+        const usuario = await UserExternal.findOne({ enlaceAccesoHash: hashToken(token), enlaceAccesoExpira: { $gt: new Date() }, estado: "ACTIVO", roles: "GENERADOR" }).populate("generadorId", "razonSocial ruc");
+        if (!usuario?.generadorId) return res.status(404).json({ message: "El enlace no es válido o ha vencido." });
+        return res.json({ razonSocial: usuario.generadorId.razonSocial, ruc: usuario.generadorId.ruc });
+    } catch (_) { return res.status(500).json({ message: "No se pudo consultar el enlace." }); }
+};
+
+const completarEnlaceAcceso = async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    const { token, password } = req.body;
+    if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token) || typeof password !== "string" || password.length < 12 || Buffer.byteLength(password, "utf8") > 72) return res.status(400).json({ message: "Usa una contraseña de al menos 12 caracteres y máximo 72 bytes." });
+    try {
+        const passwordHash = await bcrypt.hash(password, 12);
+        const actualizado = await UserExternal.findOneAndUpdate({ enlaceAccesoHash: hashToken(token), enlaceAccesoExpira: { $gt: new Date() }, estado: "ACTIVO", roles: "GENERADOR" }, { $set: { password: passwordHash }, $unset: { enlaceAccesoHash: 1, enlaceAccesoExpira: 1 } }, { new: true });
+        if (!actualizado) return res.status(404).json({ message: "El enlace no es válido, ya fue utilizado o ha vencido." });
+        return res.json({ message: "Contraseña actualizada. Ya puedes iniciar sesión." });
+    } catch (error) { console.error("Error al completar enlace de acceso:", error.message); return res.status(500).json({ message: "No se pudo actualizar la contraseña." }); }
 };
 
 const completar = async (req, res) => {
@@ -212,4 +317,4 @@ const aprobar = async (req, res) => {
     } finally { if (session) await session.endSession(); }
 };
 
-module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, listarPropias, renovar, consultarInvitacion, completar, recuperarCodigo, listar, aprobar };
+module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, solicitarVinculacionExistente, listarPropias, renovar, consultarInvitacion, generarEnlaceAcceso, consultarEnlaceAcceso, completarEnlaceAcceso, completar, recuperarCodigo, listar, aprobar };
