@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
 const Vinculacion = require("../../../../models/ManifesTower/Vinculacion");
+const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
+const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 
 const dashboardStats = async (req, res) => {
     try {
@@ -10,10 +12,13 @@ const dashboardStats = async (req, res) => {
         if (!usuarioId) return res.status(400).json({ message: "usuarioId requerido" });
 
         let matchCond = {};
+        let razonSocial = "";
         if (rolActivo === "GENERADOR") {
             const user = await UserExternal.findById(usuarioId);
             if (user?.generadorId) {
                 matchCond.generadorId = user.generadorId;
+                const empresa = await Generador.findById(user.generadorId).select("razonSocial").lean();
+                razonSocial = empresa?.razonSocial || "";
             } else {
                 return res.json({ success: true, data: {} });
             }
@@ -21,6 +26,8 @@ const dashboardStats = async (req, res) => {
             const user = await UserExternal.findById(usuarioId);
             if (user?.transportistaId) {
                 matchCond.transportistaId = user.transportistaId;
+                const empresa = await Transportista.findById(user.transportistaId).select("razonSocial").lean();
+                razonSocial = empresa?.razonSocial || "";
             } else {
                 return res.json({ success: true, data: {} });
             }
@@ -190,6 +197,7 @@ const dashboardStats = async (req, res) => {
         res.json({
             success: true,
             data: {
+                razonSocial,
                 totalManifiestos: total,
                 estados: statsEstado.reduce((acc, cur) => { acc[cur._id] = cur.count; return acc; }, {}),
                 mensual: meses,

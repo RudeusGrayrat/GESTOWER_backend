@@ -121,3 +121,4 @@ test("la plantilla final inserta las cinco imágenes de firma", async () => {
     const contarMedios = (z) => Object.keys(z.files).filter((nombre) => nombre.startsWith("word/media/") && !z.files[nombre].dir).length;
     assert.ok(contarMedios(zip) >= contarMedios(original) + 5);
 });
+

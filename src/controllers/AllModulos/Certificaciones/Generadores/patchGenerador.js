@@ -3,10 +3,12 @@ const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
-const cleanBase64 = require("../../../../utils/cleanBase64");
+const validarFirmaCarga = require("../../../../utils/validarFirmaCarga");
+const { randomUUID } = require("crypto");
 
 const patchGenerador = async (req, res) => {
     const uploadedPublicIds = [];
+    let guardado = false;
 
     try {
         const { generadorId } = req.params;
@@ -38,30 +40,29 @@ const patchGenerador = async (req, res) => {
 
         // Firmas de responsables
         if (responsablesTecnicos) {
-            const responsablesActualizados = await Promise.all(
+            const firmasValidadas = await Promise.all(
                 responsablesTecnicos.map(async (responsable) => {
-                    const responsableAnterior = findGenerador.responsablesTecnicos.find((r) => r.dniResponsable === responsable.dniResponsable);
-                    if (responsableAnterior?.firmaResponsable === responsable.firmaResponsable) return responsable;
-                    const esBase64 = responsable.firmaResponsable && !responsable.firmaResponsable.startsWith("http");
-                    if (!esBase64) return responsable;
-
-                    if (responsableAnterior?.firmaResponsable?.startsWith("https://res.cloudinary.com/")) {
-                        const oldPublicId = extractPublicId(responsableAnterior.firmaResponsable);
-                        await deleteImage(oldPublicId);
-                    }
-
-                    const fileBuffer = Buffer.from(cleanBase64(responsable.firmaResponsable), "base64");
-                    const fileName = `firma_responsable_${responsable.dniResponsable}`;
-                    const result = await uploadImage(fileBuffer, fileName);
-                    uploadedPublicIds.push(extractPublicId(result.secure_url));
-
-                    return { ...responsable, firmaResponsable: result.secure_url };
+                    const responsableAnterior = findGenerador.responsablesTecnicos.find((r) => (responsable._id && String(r._id) === String(responsable._id)) || r.dniResponsable === responsable.dniResponsable);
+                    if (!responsable.firmaResponsable || responsableAnterior?.firmaResponsable === responsable.firmaResponsable) return null;
+                    return validarFirmaCarga(responsable.firmaResponsable);
                 })
             );
+            const responsablesActualizados = [];
+            for (let i = 0; i < responsablesTecnicos.length; i++) {
+                const responsable = responsablesTecnicos[i];
+                if (!firmasValidadas[i]) {
+                    responsablesActualizados.push(responsable);
+                    continue;
+                }
+                const result = await uploadImage(firmasValidadas[i], `firma_responsable_${randomUUID()}`);
+                uploadedPublicIds.push(extractPublicId(result.secure_url));
+                responsablesActualizados.push({ ...responsable, firmaResponsable: result.secure_url });
+            }
             findGenerador.responsablesTecnicos = responsablesActualizados;
         }
 
         const updatedGenerador = await findGenerador.save();
+        guardado = true;
 
         try {
             await NotificationService.send(req.app.get("io"), {
@@ -134,10 +135,10 @@ const patchGenerador = async (req, res) => {
         });
 
     } catch (error) {
-        if (uploadedPublicIds.length > 0) {
+        if (!guardado && uploadedPublicIds.length > 0) {
             await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));
         }
-        return res.status(500).json({ message: error.message || "Error al actualizar el generador", type: "Error" });
+        return res.status(error.firmaInvalida ? 400 : 500).json({ message: error.message || "Error al actualizar el generador", type: "Error" });
     }
 };
 

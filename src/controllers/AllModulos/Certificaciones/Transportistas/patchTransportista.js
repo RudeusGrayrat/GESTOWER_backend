@@ -4,9 +4,12 @@ const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
+const validarFirmaCarga = require("../../../../utils/validarFirmaCarga");
+const { randomUUID } = require("crypto");
 
 const patchTransportista = async (req, res) => {
     const uploadedPublicIds = [];
+    let guardado = false;
 
     try {
         const { transportistaId } = req.params;
@@ -53,33 +56,30 @@ const patchTransportista = async (req, res) => {
 
         // Gestión y Reemplazo de Firmas Base64 en el Array de Responsables
         if (responsables) {
-            const responsablesActualizados = await Promise.all(
+            const firmasValidadas = await Promise.all(
                 responsables.map(async (responsable) => {
-                    // Detectar si la firma viene en Base64 o es un link HTTP antiguo
-                    const esBase64 = responsable.firmaResponsable && !responsable.firmaResponsable.startsWith("http");
-                    if (!esBase64) return responsable;
-
-                    // Buscar si este responsable ya existía mediante su DNI para borrar su firma previa de Cloudinary
-                    const responsableAnterior = findTransportista.responsables.find((r) => r.dni === responsable.dni);
-                    if (responsableAnterior?.firmaResponsable) {
-                        const oldPublicId = extractPublicId(responsableAnterior.firmaResponsable);
-                        await deleteImage(oldPublicId);
-                    }
-
-                    // Subir la nueva firma
-                    const fileBuffer = Buffer.from(responsable.firmaResponsable, "base64");
-                    const fileName = `firma_responsable_trans_${responsable.dni || Date.now()}`;
-                    const result = await uploadImage(fileBuffer, fileName);
-                    uploadedPublicIds.push(extractPublicId(result.secure_url));
-
-                    return { ...responsable, firmaResponsable: result.secure_url };
+                    const responsableAnterior = findTransportista.responsables.find((r) => (responsable._id && String(r._id) === String(responsable._id)) || r.dni === responsable.dni);
+                    if (!responsable.firmaResponsable || responsableAnterior?.firmaResponsable === responsable.firmaResponsable) return null;
+                    return validarFirmaCarga(responsable.firmaResponsable);
                 })
             );
+            const responsablesActualizados = [];
+            for (let i = 0; i < responsables.length; i++) {
+                const responsable = responsables[i];
+                if (!firmasValidadas[i]) {
+                    responsablesActualizados.push(responsable);
+                    continue;
+                }
+                const result = await uploadImage(firmasValidadas[i], `firma_responsable_trans_${randomUUID()}`);
+                uploadedPublicIds.push(extractPublicId(result.secure_url));
+                responsablesActualizados.push({ ...responsable, firmaResponsable: result.secure_url });
+            }
             findTransportista.responsables = responsablesActualizados;
         }
 
         // Guardamos los cambios principales en la colección de Transportistas
         const updatedTransportista = await findTransportista.save();
+        guardado = true;
 
         try {
             await NotificationService.send(req.app.get("io"), {
@@ -155,10 +155,10 @@ const patchTransportista = async (req, res) => {
     } catch (error) {
         console.error("Error en patchTransportista:", error);
         // En caso de caída del servidor o base de datos, limpiamos las firmas subidas en esta iteración
-        if (uploadedPublicIds.length > 0) {
+        if (!guardado && uploadedPublicIds.length > 0) {
             await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));
         }
-        return res.status(500).json({
+        return res.status(error.firmaInvalida ? 400 : 500).json({
             message: error.message || "Error al actualizar el transportista",
             type: "Error"
         });

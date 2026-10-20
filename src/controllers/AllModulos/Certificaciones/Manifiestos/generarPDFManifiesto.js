@@ -2,13 +2,13 @@ const dayjs = require("dayjs");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
 const convertToPdf = require("../../../../utils/convertToPdf");
 const convertDocx = require("../../../../utils/convertDocx");
-const path = require("path");
+const { prepararDatosManifiesto } = require("../../../../utils/prepararDatosManifiesto");
+const plantillaManifiesto = require("../../../../utils/plantillaManifiesto");
 
 
 const generarPDFManifiesto = async (req, res) => {
     try {
         const { id } = req.params;
-        const rootPath = process.cwd();
         if (!id) {
             console.warn("ID del manifiesto no proporcionado en la solicitud");
             return res.status(400).json({ message: "ID del manifiesto es obligatorio", type: "Advertencia" });
@@ -234,11 +234,8 @@ const generarPDFManifiesto = async (req, res) => {
 
             missingKey: "N/A"
         };
-        const archivo = findManifiesto.estado === "APROBADO"
-            ? "PLANTILLA_MANIFIESTO_WORD.docx"
-            : "PLANTILLA_MANIFIESTO_WORD_PENDIENTE.docx";
-        const templatePath = path.join(rootPath, "templates", archivo);
-        const docxWord = await convertDocx(dataDocx, templatePath)
+        const templatePath = await plantillaManifiesto();
+        const docxWord = await convertDocx(prepararDatosManifiesto(dataDocx), templatePath)
         const convert = await convertToPdf(docxWord);
 
         if (!convert) {

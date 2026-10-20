@@ -38,6 +38,16 @@ test("borrador, observaciones de generador y destino, corrección, reenvío y ap
     assert.equal(manifiesto.estado, "PENDIENTE");
     assert.equal(manifiesto.referendoEntrega.firmaGenerador, "");
     assert.equal((await ejecutar(editar, { residuo: { descripcion: "No permitido" } })).statusCode, 400);
+    assert.equal((await ejecutar(verificar, { estado: "APROBADO", usuarioId: id })).statusCode, 400);
+    assert.equal((await ejecutar(verificar, { estado: "RECHAZADO", observaciones: "Rechazo anticipado", usuarioId: id })).statusCode, 400);
+    assert.equal((await ejecutar(verificar, { estado: "OBSERVADO", observaciones: "  ", usuarioId: id })).statusCode, 400);
+    assert.equal((await ejecutar(verificar, { estado: "OBSERVADO", observaciones: "Revisión anticipada", usuarioId: id })).statusCode, 200);
+    assert.equal(manifiesto.estado, "OBSERVADO");
+    assert.ok(manifiesto.historialRevision.some((evento) => evento.origen === "DESTINO" && evento.observacion === "Revisión anticipada"));
+    assert.equal(manifiesto.referendoEntrega.firmaGenerador, "");
+    assert.equal((await ejecutar(editar, { residuo: { descripcion: "Corregido preliminar" }, modificadoPor: id })).statusCode, 200);
+    assert.equal((await ejecutar(enviar)).statusCode, 200);
+    assert.equal(manifiesto.estado, "PENDIENTE");
     assert.equal((await ejecutar(observar, { observacion: "Corregir residuo", usuarioId: id })).statusCode, 200);
     assert.equal(manifiesto.estado, "OBSERVADO");
     assert.equal((await ejecutar(verificar, { estado: "APROBADO", usuarioId: id })).statusCode, 400);

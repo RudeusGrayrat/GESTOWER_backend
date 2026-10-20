@@ -1,12 +1,14 @@
 const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
-const cleanBase64 = require("../../../../utils/cleanBase64");
+const validarFirmaCarga = require("../../../../utils/validarFirmaCarga");
+const { randomUUID } = require("crypto");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
 const postGenerador = async (req, res) => {
     const uploadedPublicIds = [];
+    let guardado = false;
 
     try {
         const {
@@ -25,16 +27,16 @@ const postGenerador = async (req, res) => {
         }
 
         // Subir firmas
-        const responsablesConFirma = await Promise.all(
-            (responsablesTecnicos || []).map(async (responsable) => {
-                if (!responsable.firmaResponsable) return responsable;
-                const fileBuffer = Buffer.from(cleanBase64(responsable.firmaResponsable), "base64");
-                const fileName = `firma_responsable_${responsable.dniResponsable}`;
-                const result = await uploadImage(fileBuffer, fileName);
-                uploadedPublicIds.push(extractPublicId(result.secure_url));
-                return { ...responsable, firmaResponsable: result.secure_url };
-            })
-        );
+        const listaResponsables = responsablesTecnicos || [];
+        const firmasValidadas = await Promise.all(listaResponsables.map((r) => r.firmaResponsable ? validarFirmaCarga(r.firmaResponsable) : null));
+        const responsablesConFirma = [];
+        for (let i = 0; i < listaResponsables.length; i++) {
+            const responsable = listaResponsables[i];
+            if (!firmasValidadas[i]) { responsablesConFirma.push(responsable); continue; }
+            const result = await uploadImage(firmasValidadas[i], `firma_responsable_${randomUUID()}`);
+            uploadedPublicIds.push(extractPublicId(result.secure_url));
+            responsablesConFirma.push({ ...responsable, firmaResponsable: result.secure_url });
+        }
 
         const newGenerador = new Generador({
             razonSocial, ruc, correoElectronico, direccion,
@@ -44,6 +46,7 @@ const postGenerador = async (req, res) => {
         });
 
         await newGenerador.save();
+        guardado = true;
 
         // Notifica únicamente al personal de Gestower suscrito al submódulo GENERADORES.
         try {
@@ -92,10 +95,10 @@ const postGenerador = async (req, res) => {
         });
 
     } catch (error) {
-        if (uploadedPublicIds.length > 0) {
+        if (!guardado && uploadedPublicIds.length > 0) {
             await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));
         }
-        return res.status(500).json({ message: error.message || "Error al crear el generador", type: "Error" });
+        return res.status(error.firmaInvalida ? 400 : 500).json({ message: error.message || "Error al crear el generador", type: "Error" });
     }
 };
 

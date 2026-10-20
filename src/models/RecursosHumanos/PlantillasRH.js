@@ -9,7 +9,7 @@ const plantillasRHSchema = new Schema(
     },
     tipo: {
       type: String,
-      enum: ["CONTRATO", "BOLETA"],
+      enum: ["CONTRATO", "BOLETA", "MANIFIESTO"],
       required: true,
     },
     // Solo aplica a plantillas de contrato; la boleta usa una plantilla global.

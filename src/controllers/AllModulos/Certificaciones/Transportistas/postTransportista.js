@@ -1,7 +1,8 @@
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 const Ubigeo = require("../../../../models/AllModulos/Certificacion/Ubigeo");
 const UserExternal = require("../../../../models/ManifesTower/UserExternal");
-const cleanBase64 = require("../../../../utils/cleanBase64");
+const validarFirmaCarga = require("../../../../utils/validarFirmaCarga");
+const { randomUUID } = require("crypto");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
 const bcrypt = require("bcrypt");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
@@ -9,6 +10,7 @@ const NotificationService = require("../../../Herramientas/Notification/CreateNo
 const postTransportista = async (req, res) => {
     // Array para almacenar los publicIds de las imágenes subidas y borrar en caso de rollback
     const uploadedPublicIds = [];
+    let guardado = false;
 
     try {
         const {
@@ -58,22 +60,16 @@ const postTransportista = async (req, res) => {
         }
 
         // 4. Subida de firmas de los Responsables a Cloudinary (Manejo de Base64)
-        const responsablesConFirma = await Promise.all(
-            (responsables || []).map(async (responsable) => {
-                if (!responsable.firmaResponsable || responsable.firmaResponsable.startsWith("http")) {
-                    return responsable;
-                }
-
-                const fileBuffer = Buffer.from(cleanBase64(responsable.firmaResponsable), "base64");
-                const fileName = `firma_responsable_trans_${responsable.dni || Date.now()}`;
-                const result = await uploadImage(fileBuffer, fileName);
-
-                // Trackeamos el ID por si ocurre un error más adelante
-                uploadedPublicIds.push(extractPublicId(result.secure_url));
-
-                return { ...responsable, firmaResponsable: result.secure_url };
-            })
-        );
+        const listaResponsables = responsables || [];
+        const firmasValidadas = await Promise.all(listaResponsables.map((r) => r.firmaResponsable ? validarFirmaCarga(r.firmaResponsable) : null));
+        const responsablesConFirma = [];
+        for (let i = 0; i < listaResponsables.length; i++) {
+            const responsable = listaResponsables[i];
+            if (!firmasValidadas[i]) { responsablesConFirma.push(responsable); continue; }
+            const result = await uploadImage(firmasValidadas[i], `firma_responsable_trans_${randomUUID()}`);
+            uploadedPublicIds.push(extractPublicId(result.secure_url));
+            responsablesConFirma.push({ ...responsable, firmaResponsable: result.secure_url });
+        }
 
         // 5. Instancia y guardado del Transportista
         const newTransportista = new Transportista({
@@ -96,6 +92,7 @@ const postTransportista = async (req, res) => {
         });
 
         await newTransportista.save();
+        guardado = true;
 
         try {
             await NotificationService.send(req.app.get("io"), {
@@ -146,11 +143,11 @@ const postTransportista = async (req, res) => {
 
     } catch (error) {
         // 7. ROLLBACK DE IMÁGENES: Si la base de datos falla, borramos las firmas de Cloudinary para no dejar basura
-        if (uploadedPublicIds.length > 0) {
+        if (!guardado && uploadedPublicIds.length > 0) {
             await Promise.allSettled(uploadedPublicIds.map((id) => deleteImage(id)));
         }
         console.error("Error al crear el transportista:", error);
-        return res.status(500).json({
+        return res.status(error.firmaInvalida ? 400 : 500).json({
             message: error.message || "Error al crear el transportista",
             type: "Error"
         });
