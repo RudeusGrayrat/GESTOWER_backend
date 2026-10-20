@@ -146,6 +146,46 @@ const crear = async (req, res) => {
     }
 };
 
+// Alta operativa: el transportista registra la ficha completa del generador.
+// El generador puede usar el portal después, pero no es un paso obligatorio
+// para que Tower reciba y verifique el expediente.
+const crearDirecta = async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    try {
+        const ruc = typeof req.body.ruc === "string" ? req.body.ruc.trim() : "";
+        const razonSocial = texto(req.body.razonSocial);
+        const correoElectronico = texto(req.body.correoElectronico).toLowerCase();
+        const telefono = texto(req.body.telefono, 30);
+        const representanteLegal = texto(req.body.representanteLegal);
+        const dniRepresentante = texto(req.body.dniRepresentante, 20);
+        const { responsable = {}, planta = {}, password } = req.body;
+        if (!/^\d{11}$/.test(ruc) || !razonSocial || !emailValido(correoElectronico) || !telefono || !representanteLegal || !dniRepresentante || typeof password !== "string" || password.length < 12 || Buffer.byteLength(password, "utf8") > 72) return res.status(400).json({ message: "Completa la empresa, representante, contacto y una contraseña de al menos 12 caracteres." });
+        if (await Generador.exists({ ruc }) || await UserExternal.exists({ ruc })) return res.status(409).json({ message: "El RUC ya tiene un generador o una cuenta. Búscalo para solicitar la vinculación." });
+        if (await Solicitud.exists({ ruc })) return res.status(409).json({ message: "Ya existe un registro pendiente para este RUC." });
+        const responsableLimpio = { nombreResponsable: texto(responsable.nombreResponsable), dniResponsable: texto(responsable.dniResponsable, 20), cargoResponsable: texto(responsable.cargoResponsable), correoResponsable: texto(responsable.correoResponsable).toLowerCase(), telefonoResponsable: texto(responsable.telefonoResponsable, 30) };
+        const plantaLimpia = { denominacion: texto(planta.denominacion), tipoPlanta: texto(planta.tipoPlanta), direccion: texto(planta.direccion, 300), actividadEconomica: texto(planta.actividadEconomica), ubigeoId: planta.ubigeoId, coordenadasUtm: { norte: texto(planta.coordenadasUtm?.norte, 30), este: texto(planta.coordenadasUtm?.este, 30), zona: texto(planta.coordenadasUtm?.zona, 10) } };
+        if (!responsableLimpio.nombreResponsable || !responsableLimpio.dniResponsable || !responsableLimpio.cargoResponsable || !plantaLimpia.denominacion || !plantaLimpia.tipoPlanta || !plantaLimpia.direccion || !plantaLimpia.actividadEconomica || !mongoose.isValidObjectId(plantaLimpia.ubigeoId) || typeof responsable.firmaResponsable !== "string") return res.status(400).json({ message: "Completa la planta, el responsable y su firma." });
+        if (!await Ubigeo.exists({ _id: plantaLimpia.ubigeoId })) return res.status(400).json({ message: "Selecciona un ubigeo existente." });
+        responsableLimpio.firmaResponsable = await snapshotFirma(responsable.firmaResponsable);
+        const codigoVerificacion = crypto.randomBytes(8).toString("hex").toUpperCase();
+        const solicitud = await Solicitud.create({
+            ruc, razonSocial, correoElectronico, telefono,
+            transportistaId: req.usuarioTransportista.transportistaId,
+            creadoPor: req.usuarioTransportista._id,
+            estado: "PENDIENTE_VERIFICACION",
+            datosCompletados: { representanteLegal, dniRepresentante, responsablesTecnicos: [responsableLimpio], plantas: [plantaLimpia], aceptoVinculacion: true, fechaAceptacion: new Date(), origenRegistro: "TRANSPORTISTA_DIRECTO" },
+            passwordHash: await bcrypt.hash(password, 12),
+            codigoVerificacionHash: hashToken(codigoVerificacion),
+            consentimientoVinculacion: { fecha: new Date(), version: "v1-registro-transportista", origen: "TRANSPORTISTA" },
+        });
+        const notificacionPendiente = await notificarRevision(req, solicitud, "fue registrado directamente por el transportista y requiere verificación de Tower.");
+        return res.status(201).json({ message: "Generador registrado para verificación de Tower.", codigoVerificacion, data: { _id: solicitud._id, ruc, razonSocial, estado: solicitud.estado }, notificacionPendiente });
+    } catch (error) {
+        console.error("Error al registrar generador directamente:", error.message);
+        return res.status(error.firmaInvalida ? 400 : 500).json({ message: error.message || "No se pudo registrar el generador." });
+    }
+};
+
 const buscarInvitacion = async (token) => {
     if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
     return Solicitud.findOne({ invitacionHash: hashToken(token), invitacionExpira: { $gt: new Date() }, estado: "PENDIENTE_DATOS" }).populate("transportistaId", "razonSocial ruc");
@@ -294,7 +334,7 @@ const aprobar = async (req, res) => {
             await Vinculacion.create([{ generadorId: generador._id, transportistaId: solicitud.transportistaId, iniciadoPor: "TRANSPORTISTA", status: "ACEPTADA", respondidoPor: usuario._id, fechaRespuesta: solicitud.datosCompletados.fechaAceptacion, tienePermisoLlenado: false }], { session });
             const actualizacion = await Transportista.updateOne({ _id: solicitud.transportistaId }, { $addToSet: { generadores: { generadorId: generador._id, tienePermisoLlenado: false } } }, { session });
             if (actualizacion.matchedCount !== 1) throw new Error("TRANSPORTISTA_NO_DISPONIBLE");
-            solicitud.consentimientoVinculacion = { fecha: solicitud.datosCompletados.fechaAceptacion, version: "v1-vinculacion-sin-firma-automatica", origen: "ENLACE" };
+            solicitud.consentimientoVinculacion = { fecha: solicitud.datosCompletados.fechaAceptacion, version: "v1-vinculacion-sin-firma-automatica", origen: solicitud.datosCompletados.origenRegistro === "TRANSPORTISTA_DIRECTO" ? "TRANSPORTISTA" : "ENLACE" };
             solicitud.estado = "APROBADA"; solicitud.generadorId = generador._id; solicitud.verificadoPor = req.user._id; solicitud.fechaVerificacion = new Date(); solicitud.observacion = texto(req.body.detalleVerificacion, 500); solicitud.passwordHash = undefined; solicitud.codigoVerificacionHash = undefined; solicitud.datosCompletados = undefined;
             await solicitud.save({ session });
             resultado = { generadorId: generador._id, usuarioGeneradorId: usuario._id, transportistaId: solicitud.transportistaId, razonSocial: solicitud.razonSocial };
@@ -317,4 +357,4 @@ const aprobar = async (req, res) => {
     } finally { if (session) await session.endSession(); }
 };
 
-module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, solicitarVinculacionExistente, listarPropias, renovar, consultarInvitacion, generarEnlaceAcceso, consultarEnlaceAcceso, completarEnlaceAcceso, completar, recuperarCodigo, listar, aprobar };
+module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, crearDirecta, solicitarVinculacionExistente, listarPropias, renovar, consultarInvitacion, generarEnlaceAcceso, consultarEnlaceAcceso, completarEnlaceAcceso, completar, recuperarCodigo, listar, aprobar };
