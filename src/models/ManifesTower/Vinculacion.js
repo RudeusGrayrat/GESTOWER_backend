@@ -33,6 +33,10 @@ const vinculacionSchema = mongoose.Schema(
             type: Boolean,
             default: false
         },
+        pendienteActivacionTower: {
+            type: Boolean,
+            default: false
+        },
         fechaDesvinculacion: {
             type: Date,
             default: null
