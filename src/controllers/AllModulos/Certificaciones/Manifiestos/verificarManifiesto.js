@@ -27,12 +27,10 @@ const verificarManifiesto = async (req, res) => {
             return res.status(400).json({ message: `Operación inválida. Este documento ya fue cerrado con estado: ${manifiesto.estado}`, type: "Advertencia" });
         }
 
-        const puedeObservarPendiente = manifiesto.estado === "PENDIENTE" && estado === "OBSERVADO";
-        const puedeEvaluarDestino = ["ENVIADO", "EN REVISION"].includes(manifiesto.estado);
-        if (!puedeObservarPendiente && !puedeEvaluarDestino) {
-            if (manifiesto.estado === "PENDIENTE") {
-                return res.status(400).json({ message: "El manifiesto está pendiente de revisión del generador. Puedes observarlo, pero para aprobarlo o rechazarlo el generador debe aprobarlo y enviarlo al destino.", type: "Advertencia" });
-            }
+        // PENDIENTE solo puede existir en documentos históricos del flujo que
+        // requería aprobación del generador. Tower puede cerrarlos directamente.
+        const puedeEvaluarDestino = ["ENVIADO", "EN REVISION", "PENDIENTE"].includes(manifiesto.estado);
+        if (!puedeEvaluarDestino) {
             return res.status(400).json({ message: "Solo se puede evaluar un manifiesto enviado al destino. Si fue observado, debe corregirse y reenviarse.", type: "Advertencia" });
         }
         manifiesto.$where = { estado: manifiesto.estado };

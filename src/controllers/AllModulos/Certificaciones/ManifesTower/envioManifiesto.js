@@ -1,5 +1,4 @@
 const Vinculacion = require("../../../../models/ManifesTower/Vinculacion");
-const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
@@ -48,7 +47,8 @@ const enviarManifiesto = async (req, res) => {
         const alianzasB2B = await Vinculacion.findOne({
             generadorId: manifiesto.generadorId?._id || manifiesto.generadorId,
             transportistaId: manifiesto.transportistaId?._id || manifiesto.transportistaId,
-            status: "ACEPTADA"
+            status: "ACEPTADA",
+            fechaDesvinculacion: null,
         });
         if (!alianzasB2B) {
             return res.status(400).json({
@@ -84,57 +84,23 @@ const enviarManifiesto = async (req, res) => {
             responsables: [{ rol: "TRANSPORTISTA", nombre: responsableFirmante.nombre, dni: responsableFirmante.dni, cargo: responsableFirmante.cargo, firma: firmaTransportista }],
         });
 
-        // El permiso de llenado no equivale a consentir una firma ni a omitir
-        // la revisión individual. Se conserva el permiso existente sin usarlo
-        // para despachar directamente mientras se define su alcance.
-        {
-            manifiesto.estado = "PENDIENTE";
-            manifiesto.fechaEnvio = fechaFirma;
-            manifiesto.observacion = "";
-            manifiesto.historialRevision.push({ estado: "PENDIENTE", origen: "TRANSPORTISTA", fecha: fechaFirma, actorIdDeclarado: usuarioTransportistaId });
-            await manifiesto.save();
-
-            // Buscar el usuario administrador/operador del Generador en ManifesTower para enviarle la alerta individual
-            let notificacionesPendientes = false;
-            try {
-                const usuariosGenerador = await UserExternal.find({
-                    generadorId: manifiesto.generadorId?._id || manifiesto.generadorId,
-                    roles: "GENERADOR", estado: "ACTIVO"
-                }).select("_id").lean();
-
-                const resultados = await Promise.allSettled(usuariosGenerador.map((usuario) => NotificationService.send(io, {
-                        type: "INDIVIDUAL",
-                        title: "Firma de Manifiesto Pendiente",
-                        message: `El transportista ${manifiesto.transportistaId?.razonSocial} ha creado el manifiesto ${manifiesto.numeroManifiesto}. Requiere tu revisión y firma para poder ser enviado a Tower.`,
-                        creator: {
-                            id: usuarioTransportistaId,
-                            model: "UserExternal"
-                        },
-                        scope: {
-                            receiverModel: "UserExternal",
-                            receiverId: usuario._id
-                        },
-                        entity: {
-                            id: manifiesto._id,
-                            model: "Manifiesto"
-                        }
-                    })));
-                notificacionesPendientes = !usuariosGenerador.length || resultados.some((resultado) => resultado.status === "rejected");
-            } catch (error) {
-                notificacionesPendientes = true;
-                console.error("No se pudo notificar al generador:", error);
-            }
-
-            return res.status(200).json({
-                message: notificacionesPendientes
-                    ? "Manifiesto pendiente de aprobación; no se pudo notificar al generador."
-                    : "Manifiesto enviado al generador para su revisión.",
-                type: "Correcto",
-                estado: "PENDIENTE",
-                data: manifiesto,
-                notificacionesPendientes,
+        manifiesto.estado = "ENVIADO";
+        manifiesto.fechaEnvio = fechaFirma;
+        manifiesto.observacion = "";
+        manifiesto.historialRevision.push({ estado: "ENVIADO", origen: "TRANSPORTISTA", fecha: fechaFirma, actorIdDeclarado: usuarioTransportistaId });
+        await manifiesto.save();
+        let notificacionesPendientes = false;
+        try {
+            await NotificationService.send(io, {
+                type: "SUBMODULE",
+                title: `Manifiesto enviado: ${manifiesto.numeroManifiesto}`,
+                message: `El transportista ${manifiesto.transportistaId?.razonSocial} envió el manifiesto ${manifiesto.numeroManifiesto} para revisión de Tower.`,
+                creator: { id: usuarioTransportistaId, model: "UserExternal" },
+                scope: { submoduleName: "MANIFIESTOS", moduleName: "CERTIFICACIONES" },
+                entity: { id: manifiesto._id, model: "Manifiesto" },
             });
-        }
+        } catch (error) { notificacionesPendientes = true; console.error("No se pudo notificar a Tower:", error); }
+        return res.status(200).json({ message: notificacionesPendientes ? "Manifiesto enviado a Tower, pero no se pudo emitir la notificación." : "Manifiesto enviado a Tower para su revisión.", type: "Correcto", estado: "ENVIADO", data: manifiesto, notificacionesPendientes });
 
     } catch (error) {
         if (error.name === "DocumentNotFoundError") return res.status(409).json({ message: "El manifiesto cambió mientras se enviaba. Actualiza la lista.", type: "Advertencia" });

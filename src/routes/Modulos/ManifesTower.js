@@ -6,8 +6,6 @@ const patchVinculacion = require("../../controllers/AllModulos/Certificaciones/M
 const postVinvulacion = require("../../controllers/AllModulos/Certificaciones/ManifesTower/postVinculacion");
 const desvinculation = require("../../controllers/AllModulos/Certificaciones/ManifesTower/desvinculation");
 const enviarManifiesto = require("../../controllers/AllModulos/Certificaciones/ManifesTower/envioManifiesto");
-const aprobarManifiestoGenerador = require("../../controllers/AllModulos/Certificaciones/ManifesTower/approveFirma");
-const observarManifiestoGenerador = require("../../controllers/AllModulos/Certificaciones/ManifesTower/observarManifiestoGenerador");
 const dashboardStats = require("../../controllers/AllModulos/Certificaciones/ManifesTower/dashboard");
 const patchUserExternal = require("../../controllers/AllModulos/Certificaciones/ManifesTower/patchUser");
 const solicitudGenerador = require("../../controllers/AllModulos/Certificaciones/ManifesTower/solicitudGenerador");
@@ -25,8 +23,6 @@ manifesTower.get("/dashboardStats", dashboardStats);
 
 manifesTower.patch("/patchVinculacion/:id", patchVinculacion);
 manifesTower.patch("/desvinculacion", desvinculation);
-manifesTower.patch("/aprobarManifiestoGenerador/:id", autenticarExterno, autorizarAccionManifiesto("GENERADOR"), aprobarManifiestoGenerador);
-manifesTower.patch("/observarManifiestoGenerador/:id", autenticarExterno, autorizarAccionManifiesto("GENERADOR"), observarManifiestoGenerador);
 manifesTower.patch("/patchUserExternal", autenticarExterno, patchUserExternal)
 
 manifesTower.post("/postVinculacion", solicitudGenerador.autenticarTransportista, postVinvulacion)
