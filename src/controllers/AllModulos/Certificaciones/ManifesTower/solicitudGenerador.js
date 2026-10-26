@@ -161,8 +161,8 @@ const crearDirecta = async (req, res) => {
         const telefono = texto(req.body.telefono, 30);
         const representanteLegal = texto(req.body.representanteLegal);
         const dniRepresentante = texto(req.body.dniRepresentante, 20);
-        const { responsable = {}, planta = {}, password } = req.body;
-        if (!/^\d{11}$/.test(ruc) || !razonSocial || !emailValido(correoElectronico) || !telefono || !representanteLegal || !dniRepresentante || typeof password !== "string" || password.length < 12 || Buffer.byteLength(password, "utf8") > 72) return res.status(400).json({ message: "Completa la empresa, representante, contacto y una contraseña de al menos 12 caracteres." });
+        const { responsable = {}, planta = {} } = req.body;
+        if (!/^\d{11}$/.test(ruc) || !razonSocial || !emailValido(correoElectronico) || !telefono || !representanteLegal || !dniRepresentante) return res.status(400).json({ message: "Completa la empresa, representante y datos de contacto válidos." });
         if (await Generador.exists({ ruc }) || await UserExternal.exists({ ruc })) return res.status(409).json({ message: "El RUC ya tiene un generador o una cuenta. Búscalo para solicitar la vinculación." });
         const responsableLimpio = { nombreResponsable: texto(responsable.nombreResponsable), dniResponsable: texto(responsable.dniResponsable, 20), cargoResponsable: texto(responsable.cargoResponsable), correoResponsable: texto(responsable.correoResponsable).toLowerCase(), telefonoResponsable: texto(responsable.telefonoResponsable, 30) };
         const plantaLimpia = { denominacion: texto(planta.denominacion), tipoPlanta: texto(planta.tipoPlanta), direccion: texto(planta.direccion, 300), actividadEconomica: texto(planta.actividadEconomica), ubigeoId: planta.ubigeoId, coordenadasUtm: { norte: texto(planta.coordenadasUtm?.norte, 30), este: texto(planta.coordenadasUtm?.este, 30), zona: texto(planta.coordenadasUtm?.zona, 10) } };
@@ -175,7 +175,8 @@ const crearDirecta = async (req, res) => {
             // El acceso externo se habilita solamente al aprobar el alta desde Gestower.
             // Antes de ello existe la cuenta, pero no debe poder iniciar sesión.
             generador = await Generador.create({ razonSocial, ruc, correoElectronico, telefono, representanteLegal, dniRepresentante, plantas: [plantaLimpia], responsablesTecnicos: [{ ...responsableLimpio, firmaResponsable: subida.secure_url }], usuarioManifestower: false, estado: "PENDIENTE" });
-            usuario = await UserExternal.create({ ruc, password: await bcrypt.hash(password, 12), roles: ["GENERADOR"], generadorId: generador._id, estado: "INACTIVO" });
+            // La credencial inicial se deriva del RUC; el generador podrá cambiarla desde su perfil cuando Tower active la cuenta.
+            usuario = await UserExternal.create({ ruc, password: await bcrypt.hash(ruc, 12), roles: ["GENERADOR"], generadorId: generador._id, estado: "INACTIVO" });
             await Vinculacion.create({ generadorId: generador._id, transportistaId: req.usuarioTransportista.transportistaId, iniciadoPor: "TRANSPORTISTA", status: "PENDIENTE", respondidoPor: usuario._id, pendienteActivacionTower: true });
         } catch (error) {
             await Promise.allSettled([usuario?.deleteOne(), generador?.deleteOne(), deleteImage(extractPublicId(subida.secure_url))].filter(Boolean));
@@ -185,7 +186,7 @@ const crearDirecta = async (req, res) => {
         try {
             await NotificationService.send(req.app.get("io"), { type: "SUBMODULE", title: "Generador pendiente de activación", message: `${razonSocial} fue registrado por un transportista y espera activación.`, creator: { id: req.usuarioTransportista._id, model: "UserExternal" }, scope: { moduleName: "CERTIFICACIONES", submoduleName: "GENERADORES" }, entity: { id: generador._id, model: "Generador" } });
         } catch (_) { notificacionPendiente = true; }
-        return res.status(201).json({ message: "Generador creado en estado pendiente. Tower debe cambiarlo a ACTIVO para habilitarlo.", data: generador, notificacionPendiente });
+        return res.status(201).json({ message: "Generador creado en estado pendiente. Al activarlo, podrá ingresar con su RUC como contraseña inicial y cambiarla desde su perfil.", data: generador, notificacionPendiente });
     } catch (error) {
         console.error("Error al registrar generador directamente:", error.message);
         return res.status(error.firmaInvalida ? 400 : 500).json({ message: error.message || "No se pudo registrar el generador." });
@@ -204,12 +205,15 @@ const activarRegistroDirecto = async (req, res) => {
         const vinculos = esReactivacion
             ? await Vinculacion.find({ generadorId: generador._id, status: "SUSPENDIDA", fechaDesvinculacion: null })
             : await Vinculacion.find({ generadorId: generador._id, status: "PENDIENTE", pendienteActivacionTower: true, fechaDesvinculacion: null });
-        if (!vinculos.length) return res.status(409).json({ message: esReactivacion ? "No existe un vínculo suspendido que pueda reactivarse." : "El registro no tiene un vínculo pendiente de activación válido." });
+        if (!vinculos.length && !esReactivacion) return res.status(409).json({ message: "El registro no tiene un vínculo pendiente de activación válido." });
 
         generador.estado = "ACTIVO";
         generador.usuarioManifestower = Boolean(usuario);
         await generador.save();
         if (usuario) {
+            // Una reactivación invalida la clave previa por seguridad operativa.
+            // El usuario recupera el acceso con su RUC y luego puede cambiarla desde ManifesTower.
+            if (esReactivacion) usuario.password = await bcrypt.hash(String(generador.ruc), 12);
             usuario.estado = "ACTIVO";
             await usuario.save();
         }
@@ -217,13 +221,15 @@ const activarRegistroDirecto = async (req, res) => {
             vinculo.status = "ACEPTADA";
             vinculo.pendienteActivacionTower = false;
             vinculo.fechaRespuesta = new Date();
-            vinculo.respondidoPor = usuario._id;
+            if (usuario) vinculo.respondidoPor = usuario._id;
             await vinculo.save();
             await Transportista.updateOne({ _id: vinculo.transportistaId }, { $addToSet: { generadores: { generadorId: generador._id, tienePermisoLlenado: false } } });
         }
         return res.json({
             message: esReactivacion
-                ? (usuario ? "Generador, acceso y vínculos reactivados." : "Generador y vínculos reactivados. No posee acceso a ManifesTower.")
+                ? (usuario
+                    ? (vinculos.length ? "Generador, acceso y vínculos reactivados. La contraseña se restableció a su RUC." : "Generador y acceso reactivados. La contraseña se restableció a su RUC; no había vínculos para restaurar.")
+                    : (vinculos.length ? "Generador y vínculos reactivados. No posee acceso a ManifesTower." : "Generador reactivado. No posee acceso a ManifesTower ni vínculos para restaurar."))
                 : "Generador activado y vinculado al transportista.",
             data: generador
         });
