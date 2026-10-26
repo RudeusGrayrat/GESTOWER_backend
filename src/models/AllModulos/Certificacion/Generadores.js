@@ -51,7 +51,7 @@ const generadorSchema = mongoose.Schema(
         usuarioManifestower: { type: Boolean, default: false },
         estado: {
             type: String,
-            enum: ["PENDIENTE", "ACTIVO", "INACTIVO", "SUSPENDIDO"],
+            enum: ["PENDIENTE", "ACTIVO", "INACTIVO", "SUSPENDIDO", "RECHAZADO"],
             default: "ACTIVO",
         },
     },

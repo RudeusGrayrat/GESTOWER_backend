@@ -19,7 +19,7 @@ const vinculacionSchema = mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['PENDIENTE', 'ACEPTADA', 'RECHAZADA'],
+            enum: ['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'SUSPENDIDA'],
             default: 'PENDIENTE'
         },
         respondidoPor: {

@@ -192,31 +192,90 @@ const crearDirecta = async (req, res) => {
     }
 };
 
-// Acción interna explícita. No reutiliza el editor genérico ni transacciones:
-// solamente activa un alta creada por transportista y su único vínculo marcado.
+// Acción interna explícita. Es la única vía para habilitar o reactivar el acceso
+// de ManifesTower; no reutiliza el editor genérico ni crea cuentas por sorpresa.
 const activarRegistroDirecto = async (req, res) => {
     try {
-        const generador = await Generador.findOne({ _id: req.params.id, estado: "PENDIENTE" });
-        if (!generador) return res.status(404).json({ message: "No existe un generador pendiente de activación." });
-        const vinculo = await Vinculacion.findOne({ generadorId: generador._id, status: "PENDIENTE", pendienteActivacionTower: true, fechaDesvinculacion: null });
-        if (!vinculo) return res.status(409).json({ message: "El registro no tiene un vínculo pendiente de activación válido." });
+        const generador = await Generador.findOne({ _id: req.params.id, estado: { $in: ["PENDIENTE", "SUSPENDIDO"] } });
+        if (!generador) return res.status(404).json({ message: "Solo se puede activar un generador pendiente o suspendido." });
+        const esReactivacion = generador.estado === "SUSPENDIDO";
         const usuario = await UserExternal.findOne({ generadorId: generador._id, roles: "GENERADOR" });
-        if (!usuario) return res.status(409).json({ message: "El generador no tiene cuenta externa para activar." });
+        if (!usuario && !esReactivacion) return res.status(409).json({ message: "El generador no tiene cuenta externa para activar." });
+        const vinculos = esReactivacion
+            ? await Vinculacion.find({ generadorId: generador._id, status: "SUSPENDIDA", fechaDesvinculacion: null })
+            : await Vinculacion.find({ generadorId: generador._id, status: "PENDIENTE", pendienteActivacionTower: true, fechaDesvinculacion: null });
+        if (!vinculos.length) return res.status(409).json({ message: esReactivacion ? "No existe un vínculo suspendido que pueda reactivarse." : "El registro no tiene un vínculo pendiente de activación válido." });
+
         generador.estado = "ACTIVO";
-        generador.usuarioManifestower = true;
+        generador.usuarioManifestower = Boolean(usuario);
         await generador.save();
-        usuario.estado = "ACTIVO";
-        await usuario.save();
-        vinculo.status = "ACEPTADA";
-        vinculo.pendienteActivacionTower = false;
-        vinculo.fechaRespuesta = new Date();
-        vinculo.respondidoPor = usuario._id;
-        await vinculo.save();
-        await Transportista.updateOne({ _id: vinculo.transportistaId }, { $addToSet: { generadores: { generadorId: generador._id, tienePermisoLlenado: false } } });
-        return res.json({ message: "Generador activado y vinculado al transportista.", data: generador });
+        if (usuario) {
+            usuario.estado = "ACTIVO";
+            await usuario.save();
+        }
+        for (const vinculo of vinculos) {
+            vinculo.status = "ACEPTADA";
+            vinculo.pendienteActivacionTower = false;
+            vinculo.fechaRespuesta = new Date();
+            vinculo.respondidoPor = usuario._id;
+            await vinculo.save();
+            await Transportista.updateOne({ _id: vinculo.transportistaId }, { $addToSet: { generadores: { generadorId: generador._id, tienePermisoLlenado: false } } });
+        }
+        return res.json({
+            message: esReactivacion
+                ? (usuario ? "Generador, acceso y vínculos reactivados." : "Generador y vínculos reactivados. No posee acceso a ManifesTower.")
+                : "Generador activado y vinculado al transportista.",
+            data: generador
+        });
     } catch (error) {
         console.error("Error al activar registro directo:", error);
         return res.status(500).json({ message: "No se pudo activar el generador." });
+    }
+};
+
+// La X no elimina evidencia. Rechaza altas no aprobadas o suspende una relación ya activa.
+const suspenderORechazarRegistro = async (req, res) => {
+    try {
+        const generador = await Generador.findById(req.params.id);
+        if (!generador) return res.status(404).json({ message: "Generador no encontrado." });
+        if (!["PENDIENTE", "ACTIVO"].includes(generador.estado)) {
+            return res.status(409).json({ message: "El generador ya fue rechazado o suspendido; no admite esta acción." });
+        }
+
+        const esRechazo = generador.estado === "PENDIENTE";
+        const nuevoEstadoVinculo = esRechazo ? "RECHAZADA" : "SUSPENDIDA";
+        const filtroVinculo = esRechazo
+            ? { generadorId: generador._id, status: "PENDIENTE", pendienteActivacionTower: true, fechaDesvinculacion: null }
+            : { generadorId: generador._id, status: "ACEPTADA", fechaDesvinculacion: null };
+        const vinculos = await Vinculacion.find(filtroVinculo).select("transportistaId").lean();
+
+        generador.estado = esRechazo ? "RECHAZADO" : "SUSPENDIDO";
+        generador.usuarioManifestower = false;
+        await generador.save();
+
+        await UserExternal.updateMany(
+            { generadorId: generador._id, roles: "GENERADOR" },
+            { $set: { estado: "INACTIVO" } }
+        );
+        await Vinculacion.updateMany(filtroVinculo, {
+            $set: { status: nuevoEstadoVinculo, pendienteActivacionTower: false, tienePermisoLlenado: false, fechaRespuesta: new Date() }
+        });
+        const transportistasIds = [...new Set(vinculos.map((v) => String(v.transportistaId)))];
+        if (transportistasIds.length) {
+            await Transportista.updateMany(
+                { _id: { $in: transportistasIds } },
+                { $pull: { generadores: { generadorId: generador._id } } }
+            );
+        }
+        return res.json({
+            message: esRechazo
+                ? "Registro rechazado. La cuenta y el vínculo quedaron inactivos sin borrar el historial."
+                : "Generador suspendido. Se bloqueó el acceso y los nuevos envíos; los manifiestos históricos se conservan.",
+            data: generador
+        });
+    } catch (error) {
+        console.error("Error al suspender o rechazar generador:", error);
+        return res.status(500).json({ message: "No se pudo procesar el cambio de estado del generador." });
     }
 };
 
@@ -391,4 +450,4 @@ const aprobar = async (req, res) => {
     } finally { if (session) await session.endSession(); }
 };
 
-module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, crearDirecta, activarRegistroDirecto, solicitarVinculacionExistente, listarPropias, renovar, consultarInvitacion, generarEnlaceAcceso, consultarEnlaceAcceso, completarEnlaceAcceso, completar, recuperarCodigo, listar, aprobar };
+module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, crearDirecta, activarRegistroDirecto, suspenderORechazarRegistro, solicitarVinculacionExistente, listarPropias, renovar, consultarInvitacion, generarEnlaceAcceso, consultarEnlaceAcceso, completarEnlaceAcceso, completar, recuperarCodigo, listar, aprobar };
