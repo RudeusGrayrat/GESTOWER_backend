@@ -41,6 +41,6 @@ manifesTower.post("/enlace-acceso-generador/completar", solicitudGenerador.compl
 manifesTower.post("/invitacion-generador/recuperar-codigo", solicitudGenerador.recuperarCodigo);
 manifesTower.get("/solicitudes-generador", tokenVerify, solicitudGenerador.permisoGeneradores("VER"), solicitudGenerador.listar);
 manifesTower.post("/solicitudes-generador/:id/aprobar", tokenVerify, solicitudGenerador.permisoGeneradores("APROBAR"), solicitudGenerador.aprobar);
-manifesTower.post("/generadores/:id/activar", tokenVerify, solicitudGenerador.permisoGeneradores("EDITAR"), solicitudGenerador.activarRegistroDirecto);
+manifesTower.post("/generadores/:id/activar", tokenVerify, solicitudGenerador.permisoGeneradores("APROBAR"), solicitudGenerador.activarRegistroDirecto);
 
 module.exports = manifesTower;

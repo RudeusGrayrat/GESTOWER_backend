@@ -1,9 +1,7 @@
 const Generador = require("../../../../models/AllModulos/Certificacion/Generadores");
-const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const validarFirmaCarga = require("../../../../utils/validarFirmaCarga");
 const { randomUUID } = require("crypto");
 const { uploadImage, deleteImage, extractPublicId } = require("../../../../utils/cloudinary/images");
-const bcrypt = require("bcrypt");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
 const postGenerador = async (req, res) => {
@@ -14,7 +12,6 @@ const postGenerador = async (req, res) => {
         const {
             razonSocial, ruc, correoElectronico, direccion,
             telefono, representanteLegal, dniRepresentante, plantas, responsablesTecnicos, estado,
-            usuarioManifestower // ⬅️ Recibimos el flag desde el front
         } = req.body;
 
         if (!razonSocial || !ruc || !correoElectronico || !telefono || !representanteLegal || !dniRepresentante) {
@@ -62,34 +59,8 @@ const postGenerador = async (req, res) => {
             console.error("No se pudo notificar el registro del generador:", notificationError);
         }
 
-        // ── LÓGICA CONDICIONAL DE USUARIO VIA POST ──
-        if (usuarioManifestower === true) {
-            const usuarioExistente = await UserExternal.findOne({ ruc });
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(ruc, salt); // RUC como contraseña inicial
-
-            if (usuarioExistente) {
-                if (!usuarioExistente.roles.includes("GENERADOR")) {
-                    usuarioExistente.roles.push("GENERADOR");
-                }
-                usuarioExistente.generadorId = newGenerador._id;
-                await usuarioExistente.save();
-            } else {
-                const nuevoUsuario = new UserExternal({
-                    ruc,
-                    password: hashedPassword,
-                    roles: ["GENERADOR"],
-                    generadorId: newGenerador._id,
-                    transportistaId: null
-                });
-                await nuevoUsuario.save();
-            }
-        }
-
         return res.status(201).json({
-            message: usuarioManifestower === true
-                ? "Generador y cuenta de acceso creados exitosamente"
-                : "Generador creado exitosamente (Sin cuenta de usuario)",
+            message: "Generador creado exitosamente",
             data: newGenerador,
             type: "Correcto"
         });

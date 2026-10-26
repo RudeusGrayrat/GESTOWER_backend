@@ -172,7 +172,9 @@ const crearDirecta = async (req, res) => {
         const subida = await uploadImage(firma, `firma_responsable_generador_${randomUUID()}`);
         let generador, usuario;
         try {
-            generador = await Generador.create({ razonSocial, ruc, correoElectronico, telefono, representanteLegal, dniRepresentante, plantas: [plantaLimpia], responsablesTecnicos: [{ ...responsableLimpio, firmaResponsable: subida.secure_url }], usuarioManifestower: true, estado: "PENDIENTE" });
+            // El acceso externo se habilita solamente al aprobar el alta desde Gestower.
+            // Antes de ello existe la cuenta, pero no debe poder iniciar sesión.
+            generador = await Generador.create({ razonSocial, ruc, correoElectronico, telefono, representanteLegal, dniRepresentante, plantas: [plantaLimpia], responsablesTecnicos: [{ ...responsableLimpio, firmaResponsable: subida.secure_url }], usuarioManifestower: false, estado: "PENDIENTE" });
             usuario = await UserExternal.create({ ruc, password: await bcrypt.hash(password, 12), roles: ["GENERADOR"], generadorId: generador._id, estado: "INACTIVO" });
             await Vinculacion.create({ generadorId: generador._id, transportistaId: req.usuarioTransportista.transportistaId, iniciadoPor: "TRANSPORTISTA", status: "PENDIENTE", respondidoPor: usuario._id, pendienteActivacionTower: true });
         } catch (error) {
@@ -201,6 +203,7 @@ const activarRegistroDirecto = async (req, res) => {
         const usuario = await UserExternal.findOne({ generadorId: generador._id, roles: "GENERADOR" });
         if (!usuario) return res.status(409).json({ message: "El generador no tiene cuenta externa para activar." });
         generador.estado = "ACTIVO";
+        generador.usuarioManifestower = true;
         await generador.save();
         usuario.estado = "ACTIVO";
         await usuario.save();
