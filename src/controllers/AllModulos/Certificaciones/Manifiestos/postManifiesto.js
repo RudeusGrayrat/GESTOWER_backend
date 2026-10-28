@@ -59,13 +59,6 @@ const postManifiesto = async (req, res) => {
             });
         }
 
-        if (!destinoFinal?.cantidadEntregada) {
-            return res.status(400).json({
-                message: "Complete la cantidad entregada en destino final",
-                type: "Error"
-            });
-        }
-
         // Verificar existencia de entidades relacionadas
         const [generador, transportista, destinoPredeterminado] = await Promise.all([
             Generador.findById(generadorId),
@@ -103,8 +96,8 @@ const postManifiesto = async (req, res) => {
             residuo,
             peligrosidad: peligrosidad || {},
             transporte,
-            destinoFinal,
-            otrosManejos: otrosManejos || {},
+            destinoFinal: {},
+            otrosManejos: {},
             referendoEntrega: { referendo: false, generadorResponsableManejo: referendoEntrega?.generadorResponsableManejo, responsableEors: referendoEntrega?.responsableEors },
             referendoRecepcion: { referendo: false },
             otrasObligaciones: {},

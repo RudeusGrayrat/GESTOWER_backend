@@ -1,9 +1,26 @@
 const { solicitarVinculacionExistente } = require("./solicitudGenerador");
+const Vinculacion = require("../../../../models/ManifesTower/Vinculacion");
+const Transportista = require("../../../../models/AllModulos/Certificacion/Transportistas");
+const UserExternal = require("../../../../models/ManifesTower/UserExternal");
+const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
 // Compatibilidad para el botón de "solicitar vínculo". La identidad del
 // transportista se obtiene de la sesión, nunca de IDs que envíe el navegador.
 const postVinculacion = async (req, res) => {
     try {
+        if (req.externalRole === "GENERADOR") {
+            const transportistaId = req.body?.transportistaId || req.query?.transportistaId;
+            if (!transportistaId) return res.status(400).json({ message: "Selecciona un transportista válido.", type: "Alerta" });
+            const transportista = await Transportista.findById(transportistaId).select("_id razonSocial").lean();
+            if (!transportista) return res.status(404).json({ message: "El transportista ya no está disponible.", type: "Alerta" });
+            const existente = await Vinculacion.exists({ generadorId: req.externalUser.generadorId, transportistaId, status: { $in: ["PENDIENTE", "ACEPTADA"] }, fechaDesvinculacion: null });
+            if (existente) return res.status(409).json({ message: "Ya existe una solicitud pendiente o una vinculación activa entre estas empresas.", type: "Alerta" });
+            const vinculacion = await Vinculacion.create({ generadorId: req.externalUser.generadorId, transportistaId, iniciadoPor: "GENERADOR", status: "PENDIENTE" });
+            const destinos = await UserExternal.find({ transportistaId, roles: "TRANSPORTISTA", estado: "ACTIVO" }).select("_id").lean();
+            await Promise.allSettled(destinos.map((destino) => NotificationService.send(req.app.get("io"), { type: "INDIVIDUAL", title: "Solicitud de vinculación", message: "Un generador solicitó vincularse con tu empresa.", creator: { id: req.externalUser._id, model: "UserExternal" }, scope: { receiverModel: "UserExternal", receiverId: destino._id }, entity: { id: vinculacion._id, model: "Vinculacion" } })));
+            return res.status(201).json({ message: "Solicitud de vinculación enviada con éxito.", type: "Correcto", data: vinculacion });
+        }
+        req.usuarioTransportista = req.externalUser;
         const resultado = await solicitarVinculacionExistente(req, req.body?.generadorId);
         return res.status(201).json({
             message: resultado.notificacionPendiente

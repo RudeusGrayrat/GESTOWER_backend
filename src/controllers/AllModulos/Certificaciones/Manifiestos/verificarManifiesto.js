@@ -8,7 +8,7 @@ const snapshotFirma = require("../../../../utils/manifiestoFirmaSnapshot");
 
 const verificarManifiesto = async (req, res) => {
     const { id } = req.params;
-    const { estado, observaciones } = req.body;
+    const { estado, observaciones, destinoFinal = {}, otrosManejos = {} } = req.body;
     const usuarioId = req.user?._id || req.body.usuarioId;
 
     try {
@@ -18,6 +18,9 @@ const verificarManifiesto = async (req, res) => {
         }
         if (["OBSERVADO", "RECHAZADO"].includes(estado) && !observaciones?.trim()) {
             return res.status(400).json({ message: "Indique el motivo de la observación o del rechazo.", type: "Advertencia" });
+        }
+        if (estado === "APROBADO" && (!destinoFinal.tipoManejo || destinoFinal.cantidadEntregada === "" || destinoFinal.cantidadEntregada === undefined || Number(destinoFinal.cantidadEntregada) < 0)) {
+            return res.status(400).json({ message: "Completa el tipo de manejo y la cantidad entregada en destino final.", type: "Advertencia" });
         }
 
         const manifiesto = await Manifiesto.findById(id);
@@ -89,6 +92,12 @@ const verificarManifiesto = async (req, res) => {
                 fecha: ahora,
                 hora: horaLima,
             };
+            manifiesto.destinoFinal = {
+                tipoManejo: String(destinoFinal.tipoManejo).trim(),
+                cantidadEntregada: Number(destinoFinal.cantidadEntregada),
+                observaciones: typeof destinoFinal.observaciones === "string" ? destinoFinal.observaciones.trim() : "",
+            };
+            manifiesto.otrosManejos = otrosManejos && typeof otrosManejos === "object" ? otrosManejos : {};
             manifiesto.eventosFirma.push({
                 accion: "APROBACION_DESTINO",
                 fecha: ahora,

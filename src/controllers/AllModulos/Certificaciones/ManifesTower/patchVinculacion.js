@@ -7,7 +7,9 @@ const Transportista = require("../../../../models/AllModulos/Certificacion/Trans
 const patchVinculacion = async (req, res) => {
     try {
         const { id } = req.params; // Puede ser id de Vinculacion O id de Transportista (según la acción)
-        const { accion, usuarioId, rolActivo, tienePermisoLlenado, generadorId } = req.query;
+        const { accion, tienePermisoLlenado, generadorId } = req.query;
+        const usuarioId = req.externalUser?._id;
+        const rolActivo = req.externalRole;
         const io = req.app.get("io");
 
         console.log("🚀 ~ patchVinculacion ~ req.query:", req.query);
@@ -41,6 +43,10 @@ const patchVinculacion = async (req, res) => {
         if (!vinculacion) {
             return res.status(404).json({ message: 'Vínculo comercial no encontrado o no se encuentra activo.', type: 'Alerta' });
         }
+        const actorEsGenerador = rolActivo === "GENERADOR" && String(vinculacion.generadorId) === String(req.externalUser?.generadorId);
+        const actorEsTransportista = rolActivo === "TRANSPORTISTA" && String(vinculacion.transportistaId) === String(req.externalUser?.transportistaId);
+        if (!actorEsGenerador && !actorEsTransportista) return res.status(403).json({ message: "No tienes acceso a esta vinculación.", type: "Alerta" });
+        if (["ACEPTAR", "RECHAZAR"].includes(accion) && vinculacion.iniciadoPor === rolActivo) return res.status(403).json({ message: "Solo la contraparte puede responder esta solicitud.", type: "Alerta" });
 
         const permisoBool = tienePermisoLlenado === 'true' || tienePermisoLlenado === true;
 

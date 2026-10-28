@@ -9,7 +9,8 @@ const enviarManifiesto = async (req, res) => {
         const { id } = req.params;
         const io = req.app.get("io");
         // Identidad declarada; aún no sustituye la autenticación del servidor.
-        const usuarioTransportistaId = req.user?._id || req.body?.usuarioId;
+        const usuarioActorId = req.externalUser?._id || req.user?._id;
+        const actorRol = req.externalRole || "TRANSPORTISTA";
 
         const manifiesto = await Manifiesto.findById(id)
             .populate("generadorId", "razonSocial ruc")
@@ -24,26 +25,6 @@ const enviarManifiesto = async (req, res) => {
         }
         manifiesto.$where = { estado: manifiesto.estado };
 
-        // ==========================================
-        // 🛡️ VALIDACIÓN DE FIRMA DEL TRANSPORTISTA
-        // ==========================================
-        const perfilTransportista = await Transportista.findById(manifiesto.transportistaId?._id || manifiesto.transportistaId);
-        const responsablesConFirma = (perfilTransportista?.responsables || []).filter(
-            (resp) => typeof resp.firmaResponsable === "string" && resp.firmaResponsable.trim() !== ""
-        );
-        const nombreSeleccionado = manifiesto.referendoEntrega?.responsableEors;
-        const responsableFirmante = nombreSeleccionado
-            ? responsablesConFirma.find((resp) => resp.nombre === nombreSeleccionado)
-            : responsablesConFirma[0];
-
-        if (!responsableFirmante) {
-            return res.status(400).json({
-                message: "No puedes enviar este manifiesto. El responsable del transportista seleccionado no tiene una imagen de firma registrada.",
-                type: "Alerta"
-            });
-        }
-        // ==========================================
-
         const alianzasB2B = await Vinculacion.findOne({
             generadorId: manifiesto.generadorId?._id || manifiesto.generadorId,
             transportistaId: manifiesto.transportistaId?._id || manifiesto.transportistaId,
@@ -57,13 +38,16 @@ const enviarManifiesto = async (req, res) => {
             });
         }
 
-        let firmaTransportista;
-        try {
-            firmaTransportista = await snapshotFirma(responsableFirmante.firmaResponsable);
-        } catch (error) {
-            return res.status(400).json({ message: `No se pudo conservar la firma del transportista: ${error.message}`, type: "Alerta" });
-        }
         const fechaFirma = new Date();
+        if (actorRol === "TRANSPORTISTA") {
+        const perfilTransportista = await Transportista.findById(manifiesto.transportistaId?._id || manifiesto.transportistaId);
+        const responsablesConFirma = (perfilTransportista?.responsables || []).filter((resp) => typeof resp.firmaResponsable === "string" && resp.firmaResponsable.trim());
+        const nombreSeleccionado = manifiesto.referendoEntrega?.responsableEors;
+        const responsableFirmante = nombreSeleccionado ? responsablesConFirma.find((resp) => resp.nombre === nombreSeleccionado) : responsablesConFirma[0];
+        if (!responsableFirmante) return res.status(400).json({ message: "El responsable del transportista seleccionado no tiene una imagen de firma registrada.", type: "Alerta" });
+        let firmaTransportista;
+        try { firmaTransportista = await snapshotFirma(responsableFirmante.firmaResponsable); }
+        catch (error) { return res.status(400).json({ message: `No se pudo conservar la firma del transportista: ${error.message}`, type: "Alerta" }); }
         manifiesto.referendoEntrega = {
             ...manifiesto.referendoEntrega?.toObject(),
             referendo: true,
@@ -78,24 +62,28 @@ const enviarManifiesto = async (req, res) => {
         manifiesto.eventosFirma.push({
             accion: "ENVIO_TRANSPORTISTA",
             fecha: fechaFirma,
-            actorIdDeclarado: usuarioTransportistaId,
+            actorIdDeclarado: usuarioActorId,
             actorTipo: "UserExternal",
             identidadVerificada: !!req.externalUser,
             responsables: [{ rol: "TRANSPORTISTA", nombre: responsableFirmante.nombre, dni: responsableFirmante.dni, cargo: responsableFirmante.cargo, firma: firmaTransportista }],
         });
+        } else {
+            manifiesto.referendoEntrega = { ...manifiesto.referendoEntrega?.toObject(), referendo: false, firmaResponsableEors: "", firmaGenerador: "", fechaHora: fechaFirma };
+            manifiesto.eventosFirma.push({ accion: "ENVIO_GENERADOR", fecha: fechaFirma, actorIdDeclarado: usuarioActorId, actorTipo: "UserExternal", identidadVerificada: true, responsables: [] });
+        }
 
         manifiesto.estado = "ENVIADO";
         manifiesto.fechaEnvio = fechaFirma;
         manifiesto.observacion = "";
-        manifiesto.historialRevision.push({ estado: "ENVIADO", origen: "TRANSPORTISTA", fecha: fechaFirma, actorIdDeclarado: usuarioTransportistaId });
+        manifiesto.historialRevision.push({ estado: "ENVIADO", origen: actorRol, fecha: fechaFirma, actorIdDeclarado: usuarioActorId });
         await manifiesto.save();
         let notificacionesPendientes = false;
         try {
             await NotificationService.send(io, {
                 type: "SUBMODULE",
                 title: `Manifiesto enviado: ${manifiesto.numeroManifiesto}`,
-                message: `El transportista ${manifiesto.transportistaId?.razonSocial} envió el manifiesto ${manifiesto.numeroManifiesto} para revisión de Tower.`,
-                creator: { id: usuarioTransportistaId, model: "UserExternal" },
+                message: `${actorRol === "GENERADOR" ? "El generador" : "El transportista"} envió el manifiesto ${manifiesto.numeroManifiesto} para revisión de Tower.`,
+                creator: { id: usuarioActorId, model: "UserExternal" },
                 scope: { submoduleName: "MANIFIESTOS", moduleName: "CERTIFICACIONES" },
                 entity: { id: manifiesto._id, model: "Manifiesto" },
             });

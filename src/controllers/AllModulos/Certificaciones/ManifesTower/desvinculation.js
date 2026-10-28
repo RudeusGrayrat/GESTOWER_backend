@@ -5,7 +5,11 @@ const NotificationService = require("../../../Herramientas/Notification/CreateNo
 
 const desvinculation = async (req, res) => {
     try {
-        const { transportistaId, generadorId, usuarioId, rolActivo } = req.query;
+        const { transportistaId: solicitadoTransportista, generadorId: solicitadoGenerador, motivo } = { ...req.query, ...req.body };
+        const usuarioId = req.externalUser?._id;
+        const rolActivo = req.externalRole;
+        const transportistaId = rolActivo === "TRANSPORTISTA" ? req.externalUser.transportistaId : solicitadoTransportista;
+        const generadorId = rolActivo === "GENERADOR" ? req.externalUser.generadorId : solicitadoGenerador;
         const io = req.app.get("io");
         console.log("Parámetros recibidos:", { transportistaId, generadorId, usuarioId, rolActivo });
         if (!transportistaId || !generadorId || !usuarioId || !rolActivo) {
@@ -49,7 +53,8 @@ const desvinculation = async (req, res) => {
             .populate("transportistaId", "razonSocial ruc");
         console.log("Usuario solicitante encontrado:", usuarioSolicitante);
         vinculacion.fechaDesvinculacion = new Date();
-        vinculacion.desvinculadoPor = rolActivo === "GENERADOR" ? usuarioSolicitante.generadorId._id : usuarioSolicitante.transportistaId._id;
+        vinculacion.desvinculadoPor = usuarioId;
+        vinculacion.motivoDesvinculacion = typeof motivo === "string" ? motivo.trim().slice(0, 500) : "";
         await vinculacion.save();
 
         const queryContraparte = iniciadoPor === "GENERADOR"

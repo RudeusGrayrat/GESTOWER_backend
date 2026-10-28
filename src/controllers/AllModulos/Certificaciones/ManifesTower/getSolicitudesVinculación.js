@@ -3,7 +3,9 @@ const Vinculacion = require("../../../../models/ManifesTower/Vinculacion");
 
 const getSolicitudesVinculacion = async (req, res) => {
     try {
-        const { transportistaId, generadorId, tipo } = req.query;
+        const { tipo } = req.query;
+        const transportistaId = req.externalRole === "TRANSPORTISTA" ? req.externalUser.transportistaId : undefined;
+        const generadorId = req.externalRole === "GENERADOR" ? req.externalUser.generadorId : undefined;
         let query = {};
 
         // Filtro base por empresa vinculada

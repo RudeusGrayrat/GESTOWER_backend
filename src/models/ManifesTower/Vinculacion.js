@@ -46,6 +46,7 @@ const vinculacionSchema = mongoose.Schema(
             ref: 'UserExternal',
             default: null
         }
+        , motivoDesvinculacion: { type: String, default: "", maxlength: 500 }
     },
     { timestamps: true }
 );
