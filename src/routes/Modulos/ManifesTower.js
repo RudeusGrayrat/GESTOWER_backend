@@ -14,12 +14,15 @@ const solicitudGenerador = require("../../controllers/AllModulos/Certificaciones
 const tokenVerify = require("../../controllers/auth/midellware");
 const autenticarExterno = require("../../controllers/AllModulos/Certificaciones/ManifesTower/authExterno");
 const autorizarAccionManifiesto = require("../../controllers/AllModulos/Certificaciones/ManifesTower/autorizarAccionManifiesto");
+const gestionarAccesoManifestower = require("../../controllers/AllModulos/Certificaciones/ManifesTower/gestionarAccesoManifestower");
 
 const manifesTower = Router();
 
 manifesTower.post("/login", loginExternal)
 
 manifesTower.get("/authVerify", ManifestVerifyToken);
+manifesTower.get("/accesos/:tipo/:id", tokenVerify, gestionarAccesoManifestower.permiso, gestionarAccesoManifestower.obtener);
+manifesTower.patch("/accesos/:tipo/:id", tokenVerify, gestionarAccesoManifestower.permiso, gestionarAccesoManifestower.actualizar);
 manifesTower.get("/getSolicitudesVinculacion", autenticarExterno, getSolicitudesVinculacion);
 manifesTower.get("/dashboardStats", dashboardStats);
 
