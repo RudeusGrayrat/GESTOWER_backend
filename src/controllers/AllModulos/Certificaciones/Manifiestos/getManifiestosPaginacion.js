@@ -39,9 +39,11 @@ const getManifiestoPagination = async (req, res) => {
                     return res.json({ data: [], total: 0 });
                 }
 
+                // Un borrador creado por el propio generador sigue siendo suyo.
+                // Ocultarlo hacía que el transportista sí pudiera verlo y el
+                // generador no pudiera retomarlo, corregirlo ni enviarlo.
                 andConditions.push({
-                    generadorId: findUser.generadorId,
-                    estado: { $ne: "BORRADOR" }
+                    generadorId: findUser.generadorId
                 });
             }
             else if (rolActivo === "TRANSPORTISTA") {

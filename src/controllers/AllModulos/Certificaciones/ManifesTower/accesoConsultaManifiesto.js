@@ -24,7 +24,12 @@ const documento = async (req, res, next) => {
     try {
         const doc = await Manifiesto.findById(req.params.id).select("generadorId transportistaId estado").lean();
         if (!doc) return res.status(404).json({ message: "Manifiesto no encontrado." });
-        const propio = req.externalRole === "GENERADOR" ? String(doc.generadorId) === String(req.externalUser.generadorId) && doc.estado !== "BORRADOR" : String(doc.transportistaId) === String(req.externalUser.transportistaId);
+        // El generador puede consultar todos los manifiestos de su empresa,
+        // incluidos los borradores que acaba de registrar. La autorización de
+        // edición y envío se valida por separado en sus rutas respectivas.
+        const propio = req.externalRole === "GENERADOR"
+            ? String(doc.generadorId) === String(req.externalUser.generadorId)
+            : String(doc.transportistaId) === String(req.externalUser.transportistaId);
         if (!propio) return res.status(403).json({ message: "No tienes acceso a este manifiesto." });
         next();
     } catch (_) { return res.status(400).json({ message: "Identificador de manifiesto inválido." }); }
