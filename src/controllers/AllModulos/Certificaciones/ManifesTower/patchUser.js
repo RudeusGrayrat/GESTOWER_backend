@@ -6,8 +6,8 @@ const patchUserExternal = async (req, res) => {
         const { currentPassword, newPassword } = req.body;
 
         // Validar que realmente recibimos una nueva contraseña
-        if (typeof currentPassword !== "string" || !currentPassword || Buffer.byteLength(currentPassword, "utf8") > 72 || typeof newPassword !== "string" || newPassword.length < 12 || Buffer.byteLength(newPassword, "utf8") > 72) {
-            return res.status(400).json({ message: "Ingresa la contraseña actual y una nueva de al menos 12 caracteres y máximo 72 bytes." });
+        if (typeof currentPassword !== "string" || !currentPassword || Buffer.byteLength(currentPassword, "utf8") > 72 || typeof newPassword !== "string" || newPassword.length < 8 || Buffer.byteLength(newPassword, "utf8") > 72) {
+            return res.status(400).json({ message: "Ingresa la contraseña actual y una nueva de al menos 8 caracteres y máximo 72 bytes." });
         }
 
         const findUser = await UserExternal.findById(req.externalUser._id);

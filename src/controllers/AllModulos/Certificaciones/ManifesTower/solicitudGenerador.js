@@ -347,7 +347,7 @@ const consultarEnlaceAcceso = async (req, res) => {
 const completarEnlaceAcceso = async (req, res) => {
     res.set("Cache-Control", "no-store");
     const { token, password } = req.body;
-    if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token) || typeof password !== "string" || password.length < 12 || Buffer.byteLength(password, "utf8") > 72) return res.status(400).json({ message: "Usa una contraseña de al menos 12 caracteres y máximo 72 bytes." });
+    if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token) || typeof password !== "string" || password.length < 8 || Buffer.byteLength(password, "utf8") > 72) return res.status(400).json({ message: "Usa una contraseña de al menos 8 caracteres y máximo 72 bytes." });
     try {
         const passwordHash = await bcrypt.hash(password, 12);
         const actualizado = await UserExternal.findOneAndUpdate({ enlaceAccesoHash: hashToken(token), enlaceAccesoExpira: { $gt: new Date() }, estado: "ACTIVO", roles: "GENERADOR" }, { $set: { password: passwordHash }, $unset: { enlaceAccesoHash: 1, enlaceAccesoExpira: 1 } }, { new: true });
@@ -361,16 +361,18 @@ const completar = async (req, res) => {
     try {
         const solicitud = await buscarInvitacion(req.body.token);
         if (!solicitud) return res.status(404).json({ message: "El enlace no es válido, ya fue utilizado o ha vencido." });
-        const { password, aceptaVinculacion, responsable = {}, planta = {} } = req.body;
+        const { aceptaVinculacion, responsable = {}, planta = {} } = req.body;
         const representanteLegal = texto(req.body.representanteLegal), dniRepresentante = texto(req.body.dniRepresentante, 20);
         const correoElectronico = texto(req.body.correoElectronico).toLowerCase(), telefono = texto(req.body.telefono, 30);
-        if (!emailValido(correoElectronico) || !telefono || !representanteLegal || !dniRepresentante || typeof password !== "string" || password.length < 12 || Buffer.byteLength(password, "utf8") > 72 || aceptaVinculacion !== true) return res.status(400).json({ message: "Completa tus datos, acepta la vinculación y usa una contraseña de al menos 12 caracteres y máximo 72 bytes." });
+        if (!emailValido(correoElectronico) || !telefono || !representanteLegal || !dniRepresentante || aceptaVinculacion !== true) return res.status(400).json({ message: "Completa tus datos y acepta la vinculación." });
         const responsableLimpio = { nombreResponsable: texto(responsable.nombreResponsable), dniResponsable: texto(responsable.dniResponsable, 20), cargoResponsable: texto(responsable.cargoResponsable), correoResponsable: texto(responsable.correoResponsable), telefonoResponsable: texto(responsable.telefonoResponsable, 30) };
         const plantaLimpia = { denominacion: texto(planta.denominacion), tipoPlanta: texto(planta.tipoPlanta), direccion: texto(planta.direccion, 300), actividadEconomica: texto(planta.actividadEconomica), ubigeoId: planta.ubigeoId };
         if (!responsableLimpio.nombreResponsable || !responsableLimpio.dniResponsable || !responsableLimpio.cargoResponsable || !plantaLimpia.denominacion || !plantaLimpia.tipoPlanta || !plantaLimpia.direccion || !plantaLimpia.actividadEconomica || !mongoose.isValidObjectId(plantaLimpia.ubigeoId) || typeof responsable.firmaResponsable !== "string" || !responsable.firmaResponsable.startsWith("data:image/")) return res.status(400).json({ message: "Completa la planta y el responsable, incluida su imagen de firma." });
         if (!await Ubigeo.exists({ _id: plantaLimpia.ubigeoId })) return res.status(400).json({ message: "Selecciona un ubigeo existente." });
         responsableLimpio.firmaResponsable = await snapshotFirma(responsable.firmaResponsable);
-        const passwordHash = await bcrypt.hash(password, 12);
+        // La cuenta se activa con el RUC como contraseña inicial. Solo se
+        // conserva su hash; el RUC nunca se devuelve como secreto.
+        const passwordHash = await bcrypt.hash(String(solicitud.ruc), 12);
         const codigoVerificacion = crypto.randomBytes(8).toString("hex").toUpperCase();
         const actualizada = await Solicitud.findOneAndUpdate({ _id: solicitud._id, invitacionHash: hashToken(req.body.token), invitacionExpira: { $gt: new Date() }, estado: "PENDIENTE_DATOS" }, {
             $set: { estado: "PENDIENTE_VERIFICACION", correoElectronico, telefono, datosCompletados: { representanteLegal, dniRepresentante, responsablesTecnicos: [responsableLimpio], plantas: [plantaLimpia], aceptoVinculacion: true, fechaAceptacion: new Date() }, passwordHash, codigoVerificacionHash: hashToken(codigoVerificacion) },
