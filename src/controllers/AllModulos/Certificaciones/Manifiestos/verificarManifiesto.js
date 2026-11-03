@@ -8,7 +8,7 @@ const snapshotFirma = require("../../../../utils/manifiestoFirmaSnapshot");
 
 const verificarManifiesto = async (req, res) => {
     const { id } = req.params;
-    const { estado, observaciones, destinoFinal = {}, otrosManejos = {} } = req.body;
+    const { estado, observaciones, destinoFinal = {}, otrosManejos = {}, responsableDestinoId } = req.body;
     const usuarioId = req.user?._id || req.body.usuarioId;
 
     try {
@@ -47,13 +47,18 @@ const verificarManifiesto = async (req, res) => {
                 Generador.findById(manifiesto.generadorId),
             ]);
             const tieneFirma = (responsable) => typeof responsable.firmaResponsable === "string" && responsable.firmaResponsable.trim();
-            const responsableDestino = destino?.responsables?.find(tieneFirma);
+            // Tower elige expresamente al responsable que firma la recepción.
+            // Si llega una aprobación de una versión anterior del frontend,
+            // conservamos el primer responsable con firma como compatibilidad.
+            const responsableDestino = responsableDestinoId
+                ? destino?.responsables?.find((responsable) => String(responsable._id) === String(responsableDestinoId))
+                : destino?.responsables?.find(tieneFirma);
             const responsableTransportista = transportista?.responsables?.find(tieneFirma);
             const responsableGenerador = generador?.responsablesTecnicos?.find(tieneFirma);
 
-            if (!responsableDestino || !responsableTransportista || !responsableGenerador) {
+            if (!tieneFirma(responsableDestino) || !responsableTransportista || !responsableGenerador) {
                 return res.status(400).json({
-                    message: "No se puede aprobar: destino, transportista y generador deben tener al menos un responsable con firma registrada.",
+                    message: "No se puede aprobar: seleccione un responsable de destino con firma registrada y verifique que transportista y generador también tengan una.",
                     type: "Error"
                 });
             }
