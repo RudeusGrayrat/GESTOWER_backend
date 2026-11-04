@@ -21,6 +21,10 @@ const getTransportistaById = require("../../controllers/AllModulos/Certificacion
 const verificarManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/verificarManifiesto");
 const accesoConsultaManifiesto = require("../../controllers/AllModulos/Certificaciones/ManifesTower/accesoConsultaManifiesto");
 const accesoEscrituraManifiesto = require("../../controllers/AllModulos/Certificaciones/ManifesTower/accesoEscrituraManifiesto");
+const permisoCertificacion = require("../../controllers/AllModulos/Certificaciones/permisoCertificacion");
+const deleteGenerador = require("../../controllers/AllModulos/Certificaciones/Generadores/deleteGenerador");
+const deleteTransportista = require("../../controllers/AllModulos/Certificaciones/Transportistas/deleteTransportista");
+const deleteManifiesto = require("../../controllers/AllModulos/Certificaciones/Manifiestos/deleteManifiesto");
 
 const certificacionesRouter = Router();
 
@@ -46,5 +50,9 @@ certificacionesRouter.patch("/editGenerador/:generadorId", patchGenerador)
 certificacionesRouter.patch("/editDestino/:destinoId", patchDestino)
 certificacionesRouter.patch("/patchManifiesto/:manifiestoId", accesoConsultaManifiesto.autenticar, accesoEscrituraManifiesto.permiso("EDITAR", true), accesoEscrituraManifiesto.editar, patchManifiesto)
 certificacionesRouter.patch("/verificarManifiesto/:id", accesoConsultaManifiesto.autenticar, accesoEscrituraManifiesto.permiso("APROBAR", false), verificarManifiesto)
+
+certificacionesRouter.delete("/deleteGenerador/:id", permisoCertificacion.autenticarEmpleado, permisoCertificacion.permiso("GENERADORES"), deleteGenerador);
+certificacionesRouter.delete("/deleteTransportista/:id", permisoCertificacion.autenticarEmpleado, permisoCertificacion.permiso("TRANSPORTISTAS"), deleteTransportista);
+certificacionesRouter.delete("/deleteManifiesto/:id", permisoCertificacion.autenticarEmpleado, permisoCertificacion.permiso("MANIFIESTOS"), deleteManifiesto);
 
 module.exports = certificacionesRouter;

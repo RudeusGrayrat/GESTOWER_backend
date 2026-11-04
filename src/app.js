@@ -93,7 +93,9 @@ io.on("connection", (socket) => {
 
     // 2. Canales para personal del ERP Interno
     if (userType === "Employee") {
-      // socket.join("ERP_GLOBAL");
+      // Las notificaciones GLOBAL se persisten para todos los empleados y
+      // también deben llegar a los clientes que ya están conectados.
+      socket.join("ERP_GLOBAL");
 
       if (Array.isArray(submodules)) {
         submodules.forEach((sub) => {
