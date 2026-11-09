@@ -6,9 +6,22 @@ const UserExternal = require("../../../../models/ManifesTower/UserExternal");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 const snapshotFirma = require("../../../../utils/manifiestoFirmaSnapshot");
 
+const fechaLimaISO = (fecha = new Date()) => {
+    const partes = new Intl.DateTimeFormat("en-US", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(fecha);
+    const valor = (tipo) => partes.find((parte) => parte.type === tipo)?.value;
+    return `${valor("year")}-${valor("month")}-${valor("day")}`;
+};
+
+const fechaCalendarioValida = (valor) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(valor || ""))) return false;
+    const [anio, mes, dia] = String(valor).split("-").map(Number);
+    const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+    return fecha.getUTCFullYear() === anio && fecha.getUTCMonth() === mes - 1 && fecha.getUTCDate() === dia;
+};
+
 const verificarManifiesto = async (req, res) => {
     const { id } = req.params;
-    const { estado, observaciones, destinoFinal = {}, otrosManejos = {}, responsableDestinoId } = req.body;
+    const { estado, observaciones, destinoFinal = {}, otrosManejos = {}, responsableDestinoId, fechaDevolucion } = req.body;
     const usuarioId = req.user?._id || req.body.usuarioId;
 
     try {
@@ -21,6 +34,9 @@ const verificarManifiesto = async (req, res) => {
         }
         if (estado === "APROBADO" && (!destinoFinal.tipoManejo || destinoFinal.cantidadEntregada === "" || destinoFinal.cantidadEntregada === undefined || Number(destinoFinal.cantidadEntregada) < 0)) {
             return res.status(400).json({ message: "Completa el tipo de manejo y la cantidad entregada en destino final.", type: "Advertencia" });
+        }
+        if (estado === "APROBADO" && fechaDevolucion && !fechaCalendarioValida(fechaDevolucion)) {
+            return res.status(400).json({ message: "La fecha de devolución no es válida.", type: "Advertencia" });
         }
 
         const manifiesto = await Manifiesto.findById(id);
@@ -74,6 +90,9 @@ const verificarManifiesto = async (req, res) => {
                 return res.status(400).json({ message: `No se pudieron conservar las firmas: ${error.message}`, type: "Advertencia" });
             }
             const ahora = new Date();
+            const fechaDevolucionLocal = fechaDevolucion || fechaLimaISO(ahora);
+            const [anioDevolucion, mesDevolucion, diaDevolucion] = String(fechaDevolucionLocal).split("-").map(Number);
+            const fechaDevolucionRegistrada = new Date(Date.UTC(anioDevolucion, mesDevolucion - 1, diaDevolucion, 12, 0, 0));
             const horaLima = ahora.toLocaleTimeString("es-PE", { timeZone: "America/Lima", hour: "2-digit", minute: "2-digit", hour12: false });
             manifiesto.referendoRecepcion = {
                 referendo: true,
@@ -94,7 +113,7 @@ const verificarManifiesto = async (req, res) => {
                 cargoGeneradorResponsableManejo: responsableGenerador.cargoResponsable,
                 dniGeneradorResponsableManejo: responsableGenerador.dniResponsable,
                 firmaGeneradorResponsableManejo: firmaGenerador,
-                fecha: ahora,
+                fecha: fechaDevolucionRegistrada,
                 hora: horaLima,
             };
             manifiesto.destinoFinal = {

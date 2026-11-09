@@ -165,7 +165,9 @@ const generarPDFManifiesto = async (req, res) => {
 
             // ===== REFERENDO ENTREGA =====
             nombre_generador_firma: safe(referendoEntrega.generadorResponsableManejo),
-            firma_generador: safe(referendoEntrega.firmaGenerador),
+            // Compatibilidad con documentos aprobados antes de conservar esta
+            // firma al enviar: al aprobar ya existe una copia en devolución.
+            firma_generador: safe(referendoEntrega.firmaGenerador || otrasObligaciones.firmaGeneradorResponsableManejo),
             nombre_transportista_firma: safe(referendoEntrega.responsableEors),
             firma_transportista: safe(referendoEntrega.firmaResponsableEors),
             dni_transportista_firma: safe(referendoEntrega.dniResponsableEors),

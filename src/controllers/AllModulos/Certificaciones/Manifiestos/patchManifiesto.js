@@ -1,5 +1,18 @@
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
 
+const fechaCalendario = (valor) => {
+    const [anio, mes, dia] = String(valor || "").slice(0, 10).split("-").map(Number);
+    if (!anio || !mes || !dia) return null;
+    const fecha = new Date(Date.UTC(anio, mes - 1, dia, 12, 0, 0));
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+};
+
+const fechaLimaISO = (fecha = new Date()) => {
+    const partes = new Intl.DateTimeFormat("en-US", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(fecha);
+    const valor = (tipo) => partes.find((parte) => parte.type === tipo)?.value;
+    return `${valor("year")}-${valor("month")}-${valor("day")}`;
+};
+
 const patchManifiesto = async (req, res) => {
     try {
         const { manifiestoId } = req.params;
@@ -40,7 +53,7 @@ const patchManifiesto = async (req, res) => {
         }
         if (transporte?.fechaRecepcion) {
             const fecha = String(transporte.fechaRecepcion).slice(0, 10);
-            const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+            const hoy = fechaLimaISO();
             if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || Number.isNaN(Date.parse(fecha)) || fecha < hoy) {
                 return res.status(400).json({ message: "La fecha de recepción debe ser hoy o una fecha futura.", type: "Advertencia" });
             }
@@ -75,7 +88,8 @@ const patchManifiesto = async (req, res) => {
         if (transportistaId) findManifiesto.transportistaId = transportistaId;
         if (transporte) findManifiesto.transporte = {
             ...plano(findManifiesto.transporte),
-            ...transporte
+            ...transporte,
+            ...(transporte.fechaRecepcion ? { fechaRecepcion: fechaCalendario(transporte.fechaRecepcion) } : {})
         }
         // Solo se conserva la elección de responsables: las firmas se registran
         // en las acciones de envío y aprobación, nunca desde el formulario.

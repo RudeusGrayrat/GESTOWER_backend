@@ -5,6 +5,21 @@ const Transportista = require("../../../../models/AllModulos/Certificacion/Trans
 const generarCorrelativaManifiesto = require("./correlativaManifiesto");
 const NotificationService = require("../../../Herramientas/Notification/CreateNotification");
 
+// Una fecha de calendario no representa un instante. Guardarla al mediodía UTC
+// evita que 2026-11-04 se muestre como 03/11 en America/Lima.
+const fechaCalendario = (valor) => {
+    const [anio, mes, dia] = String(valor || "").slice(0, 10).split("-").map(Number);
+    if (!anio || !mes || !dia) return null;
+    const fecha = new Date(Date.UTC(anio, mes - 1, dia, 12, 0, 0));
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+};
+
+const fechaLimaISO = (fecha = new Date()) => {
+    const partes = new Intl.DateTimeFormat("en-US", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(fecha);
+    const valor = (tipo) => partes.find((parte) => parte.type === tipo)?.value;
+    return `${valor("year")}-${valor("month")}-${valor("day")}`;
+};
+
 const postManifiesto = async (req, res) => {
     try {
         const {
@@ -49,10 +64,10 @@ const postManifiesto = async (req, res) => {
             });
         }
 
-        const fechaRecepcion = new Date(`${transporte.fechaRecepcion}T00:00:00`);
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        if (Number.isNaN(fechaRecepcion.getTime()) || fechaRecepcion < hoy) {
+        const fechaRecepcion = fechaCalendario(transporte.fechaRecepcion);
+        const hoyLima = fechaLimaISO();
+        const hoy = fechaCalendario(hoyLima);
+        if (!fechaRecepcion || !hoy || fechaRecepcion < hoy) {
             return res.status(400).json({
                 message: "La fecha de recepción debe ser hoy o una fecha futura",
                 type: "Error"
@@ -95,7 +110,7 @@ const postManifiesto = async (req, res) => {
             destinoId: destinoPredeterminado._id,
             residuo,
             peligrosidad: peligrosidad || {},
-            transporte,
+            transporte: { ...transporte, fechaRecepcion },
             destinoFinal: {},
             otrosManejos: {},
             referendoEntrega: { referendo: false, generadorResponsableManejo: referendoEntrega?.generadorResponsableManejo, responsableEors: referendoEntrega?.responsableEors },

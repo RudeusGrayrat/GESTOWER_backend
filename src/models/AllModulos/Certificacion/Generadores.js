@@ -35,6 +35,7 @@ const generadorSchema = mongoose.Schema(
             coordenadasUtm: { norte: { type: String }, este: { type: String }, zona: { type: String } },
             actividadEconomica: { type: String, required: true },
             sector: { type: String },
+            subsector: { type: String },
             tieneIga: { type: Boolean, default: false },
             institucionApruebaIga: { type: String },
             fechaAprobacionIga: { type: String },

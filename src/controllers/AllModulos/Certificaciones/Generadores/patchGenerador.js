@@ -12,7 +12,7 @@ const patchGenerador = async (req, res) => {
         const { generadorId } = req.params;
         const {
             razonSocial, ruc, correoElectronico, telefono,
-            representanteLegal, dniRepresentante, plantas, responsablesTecnicos, estado
+            representanteLegal, dniRepresentante, plantas, responsablesTecnicos
         } = req.body;
 
         if (!generadorId) {
@@ -32,7 +32,9 @@ const patchGenerador = async (req, res) => {
         if (representanteLegal) findGenerador.representanteLegal = representanteLegal;
         if (dniRepresentante) findGenerador.dniRepresentante = dniRepresentante;
         if (plantas) findGenerador.plantas = plantas;
-        if (estado) findGenerador.estado = estado;
+        // El estado comercial y el acceso externo no se modifican desde el
+        // editor: APROBAR/ACTIVAR y DESAPROBAR/SUSPENDER son acciones
+        // auditables que sincronizan Generador, cuenta y vínculos.
 
         // Firmas de responsables
         if (responsablesTecnicos) {

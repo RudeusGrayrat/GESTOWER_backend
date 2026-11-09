@@ -17,6 +17,14 @@ const { randomUUID } = require("crypto");
 const hashToken = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const texto = (value, max = 200) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const emailValido = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const idUbigeo = (value) => typeof value === "object" && value !== null ? value._id : value;
+const limpiarPlanta = (planta = {}) => ({
+    denominacion: texto(planta.denominacion), tipoPlanta: texto(planta.tipoPlanta), direccion: texto(planta.direccion, 300),
+    actividadEconomica: texto(planta.actividadEconomica), sector: texto(planta.sector), subsector: texto(planta.subsector), ubigeoId: idUbigeo(planta.ubigeoId),
+    coordenadasUtm: { norte: texto(planta.coordenadasUtm?.norte, 30), este: texto(planta.coordenadasUtm?.este, 30), zona: texto(planta.coordenadasUtm?.zona, 10) },
+    tieneIga: planta.tieneIga === true, institucionApruebaIga: texto(planta.institucionApruebaIga), fechaAprobacionIga: texto(planta.fechaAprobacionIga, 30), numeroResolucionIga: texto(planta.numeroResolucionIga, 100),
+});
+const limpiarResponsable = (responsable = {}) => ({ nombreResponsable: texto(responsable.nombreResponsable), dniResponsable: texto(responsable.dniResponsable, 20), cargoResponsable: texto(responsable.cargoResponsable), correoResponsable: texto(responsable.correoResponsable).toLowerCase(), telefonoResponsable: texto(responsable.telefonoResponsable, 30), firmaResponsable: responsable.firmaResponsable });
 // Mismo coste que las contraseñas provisionales, también cuando el RUC no existe.
 const passwordFicticio = "$2b$12$tjN7w5hrJOLROvhJci793OOsWgZA9TZG3auALsIrikb67gV/adS36";
 
@@ -161,36 +169,72 @@ const crearDirecta = async (req, res) => {
         const telefono = texto(req.body.telefono, 30);
         const representanteLegal = texto(req.body.representanteLegal);
         const dniRepresentante = texto(req.body.dniRepresentante, 20);
-        const { responsable = {}, planta = {} } = req.body;
+        const plantasEntrada = Array.isArray(req.body.plantas) ? req.body.plantas : [req.body.planta || {}];
+        const responsablesEntrada = Array.isArray(req.body.responsables) ? req.body.responsables : [req.body.responsable || {}];
         if (!/^\d{11}$/.test(ruc) || !razonSocial || !emailValido(correoElectronico) || !telefono || !representanteLegal || !dniRepresentante) return res.status(400).json({ message: "Completa la empresa, representante y datos de contacto válidos." });
         if (await Generador.exists({ ruc }) || await UserExternal.exists({ ruc })) return res.status(409).json({ message: "El RUC ya tiene un generador o una cuenta. Búscalo para solicitar la vinculación." });
-        const responsableLimpio = { nombreResponsable: texto(responsable.nombreResponsable), dniResponsable: texto(responsable.dniResponsable, 20), cargoResponsable: texto(responsable.cargoResponsable), correoResponsable: texto(responsable.correoResponsable).toLowerCase(), telefonoResponsable: texto(responsable.telefonoResponsable, 30) };
-        const plantaLimpia = { denominacion: texto(planta.denominacion), tipoPlanta: texto(planta.tipoPlanta), direccion: texto(planta.direccion, 300), actividadEconomica: texto(planta.actividadEconomica), ubigeoId: planta.ubigeoId, coordenadasUtm: { norte: texto(planta.coordenadasUtm?.norte, 30), este: texto(planta.coordenadasUtm?.este, 30), zona: texto(planta.coordenadasUtm?.zona, 10) } };
-        if (!responsableLimpio.nombreResponsable || !responsableLimpio.dniResponsable || !responsableLimpio.cargoResponsable || !plantaLimpia.denominacion || !plantaLimpia.tipoPlanta || !plantaLimpia.direccion || !plantaLimpia.actividadEconomica || !mongoose.isValidObjectId(plantaLimpia.ubigeoId) || typeof responsable.firmaResponsable !== "string") return res.status(400).json({ message: "Completa la planta, el responsable y su firma." });
-        if (!await Ubigeo.exists({ _id: plantaLimpia.ubigeoId })) return res.status(400).json({ message: "Selecciona un ubigeo existente." });
-        const firma = await validarFirmaCarga(responsable.firmaResponsable);
-        const subida = await uploadImage(firma, `firma_responsable_generador_${randomUUID()}`);
+        const plantas = plantasEntrada.map(limpiarPlanta);
+        const responsables = responsablesEntrada.map(limpiarResponsable);
+        if (!plantas.length || !responsables.length || plantas.some((p) => !p.denominacion || !p.tipoPlanta || !p.direccion || !p.actividadEconomica || !mongoose.isValidObjectId(p.ubigeoId)) || responsables.some((r) => !r.nombreResponsable || !r.dniResponsable || !r.cargoResponsable || typeof r.firmaResponsable !== "string")) return res.status(400).json({ message: "Completa cada planta, responsable y firma." });
+        if (await Promise.all(plantas.map((p) => Ubigeo.exists({ _id: p.ubigeoId }))).then((items) => items.some((item) => !item))) return res.status(400).json({ message: "Selecciona ubigeos existentes para todas las plantas." });
+        const subidas = [];
+        for (const responsable of responsables) {
+            const firma = await validarFirmaCarga(responsable.firmaResponsable);
+            const subida = await uploadImage(firma, `firma_responsable_generador_${randomUUID()}`);
+            subidas.push(subida);
+            responsable.firmaResponsable = subida.secure_url;
+        }
         let generador, usuario;
         try {
-            // El acceso externo se habilita solamente al aprobar el alta desde Gestower.
-            // Antes de ello existe la cuenta, pero no debe poder iniciar sesión.
-            generador = await Generador.create({ razonSocial, ruc, correoElectronico, telefono, representanteLegal, dniRepresentante, plantas: [plantaLimpia], responsablesTecnicos: [{ ...responsableLimpio, firmaResponsable: subida.secure_url }], usuarioManifestower: false, estado: "PENDIENTE" });
-            // La credencial inicial se deriva del RUC; el generador podrá cambiarla desde su perfil cuando Tower active la cuenta.
-            usuario = await UserExternal.create({ ruc, password: await bcrypt.hash(ruc, 12), roles: ["GENERADOR"], generadorId: generador._id, estado: "INACTIVO" });
-            await Vinculacion.create({ generadorId: generador._id, transportistaId: req.usuarioTransportista.transportistaId, iniciadoPor: "TRANSPORTISTA", status: "PENDIENTE", respondidoPor: usuario._id, pendienteActivacionTower: true });
+            generador = await Generador.create({ razonSocial, ruc, correoElectronico, telefono, representanteLegal, dniRepresentante, plantas, responsablesTecnicos: responsables, usuarioManifestower: true, estado: "ACTIVO" });
+            usuario = await UserExternal.create({ ruc, password: await bcrypt.hash(ruc, 12), roles: ["GENERADOR"], generadorId: generador._id, estado: "ACTIVO" });
+            await Vinculacion.create({ generadorId: generador._id, transportistaId: req.usuarioTransportista.transportistaId, iniciadoPor: "TRANSPORTISTA", status: "ACEPTADA", respondidoPor: usuario._id, fechaRespuesta: new Date(), pendienteActivacionTower: false });
+            await Transportista.updateOne({ _id: req.usuarioTransportista.transportistaId }, { $addToSet: { generadores: { generadorId: generador._id, tienePermisoLlenado: false } } });
         } catch (error) {
-            await Promise.allSettled([usuario?.deleteOne(), generador?.deleteOne(), deleteImage(extractPublicId(subida.secure_url))].filter(Boolean));
+            await Promise.allSettled([usuario?.deleteOne(), generador?.deleteOne(), ...subidas.map((file) => deleteImage(extractPublicId(file.secure_url)))].filter(Boolean));
             throw error;
         }
         let notificacionPendiente = false;
         try {
-            await NotificationService.send(req.app.get("io"), { type: "SUBMODULE", title: "Generador pendiente de activación", message: `${razonSocial} fue registrado por un transportista y espera activación.`, creator: { id: req.usuarioTransportista._id, model: "UserExternal" }, scope: { moduleName: "CERTIFICACIONES", submoduleName: "GENERADORES" }, entity: { id: generador._id, model: "Generador" } });
+            await NotificationService.send(req.app.get("io"), { type: "SUBMODULE", title: "Generador registrado", message: `${razonSocial} fue registrado y activado por un transportista.`, creator: { id: req.usuarioTransportista._id, model: "UserExternal" }, scope: { moduleName: "CERTIFICACIONES", submoduleName: "GENERADORES" }, entity: { id: generador._id, model: "Generador" } });
         } catch (_) { notificacionPendiente = true; }
-        return res.status(201).json({ message: "Generador creado en estado pendiente. Al activarlo, podrá ingresar con su RUC como contraseña inicial y cambiarla desde su perfil.", data: generador, notificacionPendiente });
+        return res.status(201).json({ message: "Generador creado y activado. Puede ingresar con su RUC como contraseña inicial y cambiarla desde su perfil.", data: generador, notificacionPendiente });
     } catch (error) {
         console.error("Error al registrar generador directamente:", error.message);
         return res.status(error.firmaInvalida ? 400 : 500).json({ message: error.message || "No se pudo registrar el generador." });
     }
+};
+
+// El transportista solo puede editar generadores con los que mantiene una
+// vinculación activa. Nunca recibe una vía para alterar empresas ajenas.
+const editarDirecta = async (req, res) => {
+    try {
+        const generador = await Generador.findById(req.params.id);
+        if (!generador) return res.status(404).json({ message: "Generador no encontrado." });
+        const vinculo = await Vinculacion.exists({ generadorId: generador._id, transportistaId: req.usuarioTransportista.transportistaId, status: "ACEPTADA", fechaDesvinculacion: null });
+        if (!vinculo) return res.status(403).json({ message: "No puedes editar un generador no vinculado a tu empresa." });
+        const plantasEntrada = Array.isArray(req.body.plantas) ? req.body.plantas : [];
+        const responsablesEntrada = Array.isArray(req.body.responsablesTecnicos) ? req.body.responsablesTecnicos : [];
+        const plantas = plantasEntrada.map(limpiarPlanta);
+        if (!plantas.length || plantas.some((p) => !p.denominacion || !p.tipoPlanta || !p.direccion || !p.actividadEconomica || !mongoose.isValidObjectId(p.ubigeoId))) return res.status(400).json({ message: "Completa todas las plantas y sus ubigeos." });
+        if (await Promise.all(plantas.map((p) => Ubigeo.exists({ _id: p.ubigeoId }))).then((items) => items.some((item) => !item))) return res.status(400).json({ message: "Selecciona ubigeos existentes para todas las plantas." });
+        const anteriores = generador.responsablesTecnicos || [];
+        const responsables = [];
+        for (const entrada of responsablesEntrada) {
+            const responsable = limpiarResponsable(entrada);
+            if (!responsable.nombreResponsable || !responsable.dniResponsable || !responsable.cargoResponsable) return res.status(400).json({ message: "Completa todos los responsables." });
+            const anterior = anteriores.find((item) => String(item._id) === String(entrada._id) || item.dniResponsable === responsable.dniResponsable);
+            if (typeof responsable.firmaResponsable === "string" && responsable.firmaResponsable.startsWith("data:image/")) responsable.firmaResponsable = (await uploadImage(await validarFirmaCarga(responsable.firmaResponsable), `firma_responsable_generador_${randomUUID()}`)).secure_url;
+            else responsable.firmaResponsable = anterior?.firmaResponsable || responsable.firmaResponsable;
+            if (!responsable.firmaResponsable) return res.status(400).json({ message: "Cada responsable debe tener una firma PNG o JPG válida." });
+            responsables.push(responsable);
+        }
+        if (!responsables.length) return res.status(400).json({ message: "Agrega al menos un responsable técnico." });
+        for (const key of ["razonSocial", "correoElectronico", "telefono", "representanteLegal", "dniRepresentante"]) if (req.body[key] !== undefined) generador[key] = key === "correoElectronico" ? texto(req.body[key]).toLowerCase() : texto(req.body[key]);
+        generador.plantas = plantas; generador.responsablesTecnicos = responsables;
+        await generador.save();
+        return res.json({ message: "Generador actualizado correctamente.", data: generador });
+    } catch (error) { console.error("Error al editar generador desde transportista:", error.message); return res.status(error.firmaInvalida ? 400 : 500).json({ message: error.message || "No se pudo actualizar el generador." }); }
 };
 
 // Acción interna explícita. Es la única vía para habilitar o reactivar el acceso
@@ -458,4 +502,4 @@ const aprobar = async (req, res) => {
     } finally { if (session) await session.endSession(); }
 };
 
-module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, crearDirecta, activarRegistroDirecto, suspenderORechazarRegistro, solicitarVinculacionExistente, listarPropias, renovar, consultarInvitacion, generarEnlaceAcceso, consultarEnlaceAcceso, completarEnlaceAcceso, completar, recuperarCodigo, listar, aprobar };
+module.exports = { autenticarTransportista, autenticarGenerador, miGenerador, permisoGeneradores, crear, crearDirecta, editarDirecta, activarRegistroDirecto, suspenderORechazarRegistro, solicitarVinculacionExistente, listarPropias, renovar, consultarInvitacion, generarEnlaceAcceso, consultarEnlaceAcceso, completarEnlaceAcceso, completar, recuperarCodigo, listar, aprobar };

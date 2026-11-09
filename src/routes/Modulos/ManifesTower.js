@@ -37,6 +37,7 @@ manifesTower.post("/enviarManifiesto/:id", autenticarExterno, autorizarAccionMan
 
 manifesTower.post("/solicitudes-generador", solicitudGenerador.autenticarTransportista, solicitudGenerador.crear);
 manifesTower.post("/generadores/registro-directo", solicitudGenerador.autenticarTransportista, solicitudGenerador.crearDirecta);
+manifesTower.patch("/generadores/:id/registro-directo", solicitudGenerador.autenticarTransportista, solicitudGenerador.editarDirecta);
 manifesTower.get("/mis-solicitudes-generador", solicitudGenerador.autenticarTransportista, solicitudGenerador.listarPropias);
 manifesTower.post("/mis-solicitudes-generador/:id/renovar", solicitudGenerador.autenticarTransportista, solicitudGenerador.renovar);
 manifesTower.post("/generadores/:id/enlace-acceso", solicitudGenerador.autenticarTransportista, solicitudGenerador.generarEnlaceAcceso);
