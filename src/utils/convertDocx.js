@@ -18,21 +18,6 @@ const IMAGEN_TRANSPARENTE = Buffer.from(
     "base64"
 );
 
-// El color se aplica al documento Word antes de que LibreOffice lo convierta.
-// Hacerlo sobre el PDF ya generado puede tapar texto, firmas o casillas.
-const aplicarColorPagina = (zip, colorPagina) => {
-    if (!colorPagina) return;
-    const documentXml = zip.file("word/document.xml");
-    if (!documentXml) return;
-    let xml = documentXml.asText();
-    const inicioDocumento = xml.indexOf("<w:document");
-    const cierreApertura = inicioDocumento >= 0 ? xml.indexOf(">", inicioDocumento) : -1;
-    if (cierreApertura >= 0) {
-        xml = `${xml.slice(0, cierreApertura + 1)}<w:background w:color="${colorPagina}"/>${xml.slice(cierreApertura + 1)}`;
-    }
-    zip.file("word/document.xml", xml);
-};
-
 const obtenerDimensionesImagen = (imageData) => {
     const bytes = new Uint8Array(imageData);
 
@@ -186,7 +171,6 @@ const convertDocx = async (predata, templatePath, options = {}) => {
             modules: [new ImageModule(imageOptions)],
         });
         await doc.renderAsync(predata);
-        aplicarColorPagina(doc.getZip(), options.colorPagina);
         console.timeEnd("⏱️ Tiempo convertDocx");
         return doc.getZip().generate({ type: "nodebuffer" });
     } catch (error) {

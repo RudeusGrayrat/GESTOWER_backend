@@ -2,6 +2,7 @@ const dayjs = require("dayjs");
 const Manifiesto = require("../../../../models/AllModulos/Certificacion/Manifiestos");
 const convertToPdf = require("../../../../utils/convertToPdf");
 const convertDocx = require("../../../../utils/convertDocx");
+const aplicarFondoPdf = require("../../../../utils/aplicarFondoPdf");
 const { prepararDatosManifiesto } = require("../../../../utils/prepararDatosManifiesto");
 const plantillaManifiesto = require("../../../../utils/plantillaManifiesto");
 
@@ -252,24 +253,23 @@ const generarPDFManifiesto = async (req, res) => {
             fecha_devolucion: fechaFormat(otrasObligaciones.fecha),
             hora_devolucion: safe(otrasObligaciones.hora),
 
-            // Variable opcional: no obliga a cambiar la plantilla actual.
-            tipo_copia_manifiesto: copia.etiqueta,
-
             missingKey: "N/A"
         };
         const templatePath = await plantillaManifiesto();
-        const docxWord = await convertDocx(prepararDatosManifiesto(dataDocx), templatePath, { colorPagina: copia.color });
+        const docxWord = await convertDocx(prepararDatosManifiesto(dataDocx), templatePath);
         const convert = await convertToPdf(docxWord);
 
         if (!convert) {
             console.error("La conversión a PDF no generó un resultado válido");
             return res.status(500).json({ message: "Error al convertir el documento a PDF", type: "Error" });
         }
+        const pdfConColor = await aplicarFondoPdf(convert, copia.color);
         res.set({
             'Content-Type': 'application/pdf',
             'Content-Disposition': `inline; filename="${findManifiesto.numeroManifiesto}-${copia.clave}.pdf"`,
+            'Cache-Control': 'no-store',
         });
-        res.send(convert);
+        res.send(pdfConColor);
 
     } catch (error) {
         console.error("Error generando PDF:", error);
