@@ -170,7 +170,11 @@ const crearDirecta = async (req, res) => {
         const representanteLegal = texto(req.body.representanteLegal);
         const dniRepresentante = texto(req.body.dniRepresentante, 20);
         const plantasEntrada = Array.isArray(req.body.plantas) ? req.body.plantas : [req.body.planta || {}];
-        const responsablesEntrada = Array.isArray(req.body.responsables) ? req.body.responsables : [req.body.responsable || {}];
+        // La ficha actual envía `responsablesTecnicos`; se acepta `responsables`
+        // únicamente para no romper formularios antiguos durante la transición.
+        const responsablesEntrada = Array.isArray(req.body.responsablesTecnicos)
+            ? req.body.responsablesTecnicos
+            : (Array.isArray(req.body.responsables) ? req.body.responsables : [req.body.responsable || {}]);
         if (!/^\d{11}$/.test(ruc) || !razonSocial || !emailValido(correoElectronico) || !telefono || !representanteLegal || !dniRepresentante) return res.status(400).json({ message: "Completa la empresa, representante y datos de contacto válidos." });
         if (await Generador.exists({ ruc }) || await UserExternal.exists({ ruc })) return res.status(409).json({ message: "El RUC ya tiene un generador o una cuenta. Búscalo para solicitar la vinculación." });
         const plantas = plantasEntrada.map(limpiarPlanta);
@@ -237,27 +241,22 @@ const editarDirecta = async (req, res) => {
     } catch (error) { console.error("Error al editar generador desde transportista:", error.message); return res.status(error.firmaInvalida ? 400 : 500).json({ message: error.message || "No se pudo actualizar el generador." }); }
 };
 
-// Acción interna explícita. Es la única vía para habilitar o reactivar el acceso
-// de ManifesTower; no reutiliza el editor genérico ni crea cuentas por sorpresa.
+// Acción interna explícita: solo reactiva una cuenta suspendida. Las altas
+// directas nacen activas, por lo que nunca pasan por una aprobación manual.
 const activarRegistroDirecto = async (req, res) => {
     try {
-        const generador = await Generador.findOne({ _id: req.params.id, estado: { $in: ["PENDIENTE", "SUSPENDIDO"] } });
-        if (!generador) return res.status(404).json({ message: "Solo se puede activar un generador pendiente o suspendido." });
-        const esReactivacion = generador.estado === "SUSPENDIDO";
+        const generador = await Generador.findOne({ _id: req.params.id, estado: "SUSPENDIDO" });
+        if (!generador) return res.status(404).json({ message: "Solo se puede reactivar un generador suspendido." });
         const usuario = await UserExternal.findOne({ generadorId: generador._id, roles: "GENERADOR" });
-        if (!usuario && !esReactivacion) return res.status(409).json({ message: "El generador no tiene cuenta externa para activar." });
-        const vinculos = esReactivacion
-            ? await Vinculacion.find({ generadorId: generador._id, status: "SUSPENDIDA", fechaDesvinculacion: null })
-            : await Vinculacion.find({ generadorId: generador._id, status: "PENDIENTE", pendienteActivacionTower: true, fechaDesvinculacion: null });
-        if (!vinculos.length && !esReactivacion) return res.status(409).json({ message: "El registro no tiene un vínculo pendiente de activación válido." });
+        const vinculos = await Vinculacion.find({ generadorId: generador._id, status: "SUSPENDIDA", fechaDesvinculacion: null });
 
         generador.estado = "ACTIVO";
         generador.usuarioManifestower = Boolean(usuario);
         await generador.save();
         if (usuario) {
-            // Una reactivación invalida la clave previa por seguridad operativa.
+            // La reactivación invalida la clave previa por seguridad operativa.
             // El usuario recupera el acceso con su RUC y luego puede cambiarla desde ManifesTower.
-            if (esReactivacion) usuario.password = await bcrypt.hash(String(generador.ruc), 12);
+            usuario.password = await bcrypt.hash(String(generador.ruc), 12);
             usuario.estado = "ACTIVO";
             await usuario.save();
         }
@@ -270,11 +269,9 @@ const activarRegistroDirecto = async (req, res) => {
             await Transportista.updateOne({ _id: vinculo.transportistaId }, { $addToSet: { generadores: { generadorId: generador._id, tienePermisoLlenado: false } } });
         }
         return res.json({
-            message: esReactivacion
-                ? (usuario
-                    ? (vinculos.length ? "Generador, acceso y vínculos reactivados. La contraseña se restableció a su RUC." : "Generador y acceso reactivados. La contraseña se restableció a su RUC; no había vínculos para restaurar.")
-                    : (vinculos.length ? "Generador y vínculos reactivados. No posee acceso a ManifesTower." : "Generador reactivado. No posee acceso a ManifesTower ni vínculos para restaurar."))
-                : "Generador activado y vinculado al transportista.",
+            message: usuario
+                ? (vinculos.length ? "Generador, acceso y vínculos reactivados. La contraseña se restableció a su RUC." : "Generador y acceso reactivados. La contraseña se restableció a su RUC; no había vínculos para restaurar.")
+                : (vinculos.length ? "Generador y vínculos reactivados. No posee acceso a ManifesTower." : "Generador reactivado. No posee acceso a ManifesTower ni vínculos para restaurar."),
             data: generador
         });
     } catch (error) {
@@ -283,23 +280,18 @@ const activarRegistroDirecto = async (req, res) => {
     }
 };
 
-// La X no elimina evidencia. Rechaza altas no aprobadas o suspende una relación ya activa.
+// La X no elimina evidencia: suspende la cuenta, vínculos y nuevos envíos.
 const suspenderORechazarRegistro = async (req, res) => {
     try {
         const generador = await Generador.findById(req.params.id);
         if (!generador) return res.status(404).json({ message: "Generador no encontrado." });
-        if (!["PENDIENTE", "ACTIVO"].includes(generador.estado)) {
-            return res.status(409).json({ message: "El generador ya fue rechazado o suspendido; no admite esta acción." });
+        if (generador.estado !== "ACTIVO") {
+            return res.status(409).json({ message: "Solo se puede suspender un generador activo." });
         }
-
-        const esRechazo = generador.estado === "PENDIENTE";
-        const nuevoEstadoVinculo = esRechazo ? "RECHAZADA" : "SUSPENDIDA";
-        const filtroVinculo = esRechazo
-            ? { generadorId: generador._id, status: "PENDIENTE", pendienteActivacionTower: true, fechaDesvinculacion: null }
-            : { generadorId: generador._id, status: "ACEPTADA", fechaDesvinculacion: null };
+        const filtroVinculo = { generadorId: generador._id, status: "ACEPTADA", fechaDesvinculacion: null };
         const vinculos = await Vinculacion.find(filtroVinculo).select("transportistaId").lean();
 
-        generador.estado = esRechazo ? "RECHAZADO" : "SUSPENDIDO";
+        generador.estado = "SUSPENDIDO";
         generador.usuarioManifestower = false;
         await generador.save();
 
@@ -308,7 +300,7 @@ const suspenderORechazarRegistro = async (req, res) => {
             { $set: { estado: "INACTIVO" } }
         );
         await Vinculacion.updateMany(filtroVinculo, {
-            $set: { status: nuevoEstadoVinculo, pendienteActivacionTower: false, tienePermisoLlenado: false, fechaRespuesta: new Date() }
+            $set: { status: "SUSPENDIDA", pendienteActivacionTower: false, tienePermisoLlenado: false, fechaRespuesta: new Date() }
         });
         const transportistasIds = [...new Set(vinculos.map((v) => String(v.transportistaId)))];
         if (transportistasIds.length) {
@@ -318,9 +310,7 @@ const suspenderORechazarRegistro = async (req, res) => {
             );
         }
         return res.json({
-            message: esRechazo
-                ? "Registro rechazado. La cuenta y el vínculo quedaron inactivos sin borrar el historial."
-                : "Generador suspendido. Se bloqueó el acceso y los nuevos envíos; los manifiestos históricos se conservan.",
+            message: "Generador suspendido. Se bloqueó el acceso y los nuevos envíos; los manifiestos históricos se conservan.",
             data: generador
         });
     } catch (error) {

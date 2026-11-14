@@ -113,7 +113,9 @@ const postManifiesto = async (req, res) => {
             transporte: { ...transporte, fechaRecepcion },
             destinoFinal: {},
             otrosManejos: {},
-            referendoEntrega: { referendo: false, generadorResponsableManejo: referendoEntrega?.generadorResponsableManejo, responsableEors: referendoEntrega?.responsableEors },
+            // El refrendo de entrega siempre corresponde a un manifiesto. Las
+            // firmas se inmovilizan al enviarlo, nunca durante el borrador.
+            referendoEntrega: { referendo: true, generadorResponsableManejo: referendoEntrega?.generadorResponsableManejo, responsableEors: referendoEntrega?.responsableEors },
             referendoRecepcion: { referendo: false },
             otrasObligaciones: {},
             estado: "BORRADOR",

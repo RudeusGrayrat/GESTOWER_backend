@@ -95,7 +95,7 @@ const patchManifiesto = async (req, res) => {
         // en las acciones de envío y aprobación, nunca desde el formulario.
         const entregaAnterior = plano(findManifiesto.referendoEntrega);
         findManifiesto.referendoEntrega = {
-            referendo: false,
+            referendo: true,
             generadorResponsableManejo: referendoEntrega?.generadorResponsableManejo ?? entregaAnterior.generadorResponsableManejo,
             responsableEors: referendoEntrega?.responsableEors ?? entregaAnterior.responsableEors,
         };

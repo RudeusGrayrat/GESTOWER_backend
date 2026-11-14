@@ -5,6 +5,20 @@ const convertDocx = require("../../../../utils/convertDocx");
 const { prepararDatosManifiesto } = require("../../../../utils/prepararDatosManifiesto");
 const plantillaManifiesto = require("../../../../utils/plantillaManifiesto");
 
+// Art. 117 del D.S. 057-2004-PCM: los formularios se diferencian por color.
+// Son tonos pastel deliberadamente: conservan contraste para texto negro,
+// firmas y casillas, tanto en pantalla como al imprimir.
+const COPIAS_OFICIALES = {
+    AUTORIDAD: { color: "D9EAD3", etiqueta: "Original - Autoridad competente" },
+    GENERADOR: { color: "FFFFFF", etiqueta: "Primera copia - Generador" },
+    TRANSPORTISTA: { color: "FFF2CC", etiqueta: "Segunda copia - EPS-RS de transporte" },
+    DESTINO_FINAL: { color: "DDEBF7", etiqueta: "Tercera copia - Tratamiento o disposición final" },
+};
+
+const copiaSolicitada = (valor) => {
+    const clave = String(valor || "GENERADOR").trim().toUpperCase();
+    return COPIAS_OFICIALES[clave] ? { clave, ...COPIAS_OFICIALES[clave] } : null;
+};
 
 const generarPDFManifiesto = async (req, res) => {
     try {
@@ -12,6 +26,10 @@ const generarPDFManifiesto = async (req, res) => {
         if (!id) {
             console.warn("ID del manifiesto no proporcionado en la solicitud");
             return res.status(400).json({ message: "ID del manifiesto es obligatorio", type: "Advertencia" });
+        }
+        const copia = copiaSolicitada(req.query.copia);
+        if (!copia) {
+            return res.status(400).json({ message: "Tipo de copia inválido. Usa AUTORIDAD, GENERADOR, TRANSPORTISTA o DESTINO_FINAL.", type: "Advertencia" });
         }
 
         const findManifiesto = await
@@ -234,10 +252,13 @@ const generarPDFManifiesto = async (req, res) => {
             fecha_devolucion: fechaFormat(otrasObligaciones.fecha),
             hora_devolucion: safe(otrasObligaciones.hora),
 
+            // Variable opcional: no obliga a cambiar la plantilla actual.
+            tipo_copia_manifiesto: copia.etiqueta,
+
             missingKey: "N/A"
         };
         const templatePath = await plantillaManifiesto();
-        const docxWord = await convertDocx(prepararDatosManifiesto(dataDocx), templatePath)
+        const docxWord = await convertDocx(prepararDatosManifiesto(dataDocx), templatePath, { colorPagina: copia.color });
         const convert = await convertToPdf(docxWord);
 
         if (!convert) {
@@ -246,7 +267,7 @@ const generarPDFManifiesto = async (req, res) => {
         }
         res.set({
             'Content-Type': 'application/pdf',
-            'Content-Disposition': 'inline; filename=reporte.pdf',
+            'Content-Disposition': `inline; filename="${findManifiesto.numeroManifiesto}-${copia.clave}.pdf"`,
         });
         res.send(convert);
 
